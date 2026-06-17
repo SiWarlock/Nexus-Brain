@@ -209,7 +209,7 @@ Cross-doc invariants (mirrored in area `CLAUDE.md`). **★ = freeze-before-fork 
 
 | Model | § | Fields (summary) | ★ |
 |---|---|---|---|
-| **Chunk** | §5/§8 | chunk_id·project_id·source_path·doc_or_code·producer·doc_type·ownership·register·text·vector·(BM25)·anchor·content_hash·last_resolved_sha·embedding_model_version·generation·tombstone | ★ |
+| **Chunk** | §5/§8 | chunk_id·project_id·source_path·doc_or_code·producer·doc_type·ownership·register·text·vector·anchor·content_hash·last_resolved_sha·ingested_from_sha·embedding_model_version·context_blurb·generation·tombstone·created_at  **(19 — frozen @track/contract `269b68e`; FTS/BM25 = native LanceDB index on `text`, not a field)** | ★ |
 | **Store version stamp** | §5/§6 | `{embedding_model, dimension, schema_version, index_built_at, source_root_hash}`; git-SHA = LanceDB version tag (canonical) | ★ |
 | **Manifest + Registry** | §5 | manifest `{schemaVersion, project_id, source_repo, ingestedFromSha(derived), embedding_model, dimension, chunker_version, artifacts[], policy_path}`; registry `project_id → {db_path, schema_version, model_version, codegraph_db_path, last_indexed_sha}` (derived) | ★ |
 | **Anchor** | §10 | anchor_id·project_id·source_file·source_span·target_path·target_line_start/end·target_symbol·state(live\|stale\|moved\|unknown\|orphaned)·last_resolved_sha·confidence | ★ |
