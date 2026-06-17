@@ -27,6 +27,9 @@
 - **spec-lint template assumes letter-prefixed task IDs** *(origin: 2026-06-17 spec-lint finding; fixed in-tree @track/contract 392ed4f)* — the `spec-lint.sh brief` Task-ID extraction regex was `[A-Za-z]+[0-9]*\.[0-9]+`, which fails this project's numeric `N.M` IDs (`1.1` → `FAIL no Task ID line found`, cascading to skip the anchor-subset check). Fixed locally (letter class → optional `[A-Za-z]*`). **Upstream follow-up (out of scope now):** this is a scaffolding-TEMPLATE bug — flag to the scaffolding repo / `/scaffold-upgrade` so the template carries the fix and the next upgrade doesn't clobber the local override.
 - **`core/pyproject.toml` `requires-python = ">=3.12,<3.13"`** *(origin: 2026-06-17 1.1 / T6)* — upper bound pins to 3.12.x by design; needs a deliberate bump when the project moves to Python 3.13. Low-priority reminder, not a blocker.
 - **`.claude/commands/preflight.md` Step-4 `uv run mypy core` is known-stale** *(origin: 2026-06-17 1.1 / D-A3)* — the flat core/ layout has no `core/core/`; correct command is `uv run mypy .` (already fixed in `core/CLAUDE.md`). Editing the command file is agent-loaded config → needs owner authorization (HITL-deferred). Core implementers override Step-4 with `mypy .` until the owner resolves it.
+- **1.4 `CodeGraphPort` inputs from spike 0.2** *(origin: 2026-06-17 / D-A4; see `ci/probes/codegraph_coldiff.md`)* — pin `=1.0.1`; assert `schema_versions MAX >= 5` (NOT `=1`, the plan/§7 text); map `search` kind → CLI `codegraph query`; version-check at startup + fail-fast if `< 1.0.1` (system codegraph is v0.9.7, lacks `explore`/`node`) OR route via the 1.0.1 MCP daemon. **Reconcile the §0.2 + Appendix-A CodeGraphPort `schema_versions` value when authoring 1.4** (integration checkout).
+- **1.5 `Redactor` inputs from spike 0.1** *(origin: 2026-06-17; see `docs/audits/redaction-envelope.md`)* — freeze signature `redact(payload, sink: Sink) -> str`, `Sink` = {persist, mcp_egress, cloud_egress} (all 3 required); docstring enumerates the 3 accepted residuals + cites §18/C-11; declare the envelope (recall ≥95% / FP ≤5%, git-SHA 0% FP hard); behavioral invariants idempotent + never-raises + git-SHA-passthrough. **FLAG-4 (cloud_egress stricter than persist?) DEFERRED to Phase-2.3/policy.yaml §16 — does not block the 1.5 signature freeze** (escalated to owner via lead 2026-06-17; default = signature allows per-sink strictness, decided at 2.3).
+- **Phase-2.3 redactor engine inputs from spike 0.1** — wire `ci/eval/redaction_fuzz/` harness as a CI hard gate; address FLAG-1 (encoding-aware/decode-before-detect oracle), FLAG-2 (JWT shape-matcher not context-only), FLAG-3 (binary/compiled-artifact corpus — assess ingest scope).
 
 ---
 
@@ -156,15 +159,15 @@ Executed row-by-row by `/phase-exit <phase>`:
 **Track:** contract · **Depends on (phases):** none.
 
 ### 0.1 — Redaction property/fuzz harness (rig)
-- [ ] A property generator + curated adversarial seed corpus for secret-shaped inputs (prefix/entropy/JSON-value classes); leak = a secret surviving into chunk text/vector OR a (simulated) MCP-egress OR cloud-egress payload.
-- [ ] Quantified **recall-floor (catchable set) + FP-ceiling**; the enumerated accepted-residual classes recorded.
-- [ ] Files: `ci/eval/redaction_fuzz/` (NEW), `docs/audits/redaction-envelope.md` (NEW).
-- [ ] Cross-doc invariant: none (test rig). Depends on: none.
+- [x] A property generator + curated adversarial seed corpus for secret-shaped inputs (prefix/entropy/JSON-value classes); leak = a secret surviving into chunk text/vector OR a (simulated) MCP-egress OR cloud-egress payload.
+- [x] Quantified **recall-floor (catchable set) + FP-ceiling** — proposed **recall ≥95% / FP ≤5%** (git-SHA 0% FP, hard sub-invariant); the 3 §18-anchored accepted-residual classes (git-SHA hex · adversarial <20-char split · sub-20-char JSON) recorded, zero deviation.
+- [x] Files: `ci/eval/redaction_fuzz/` (NEW), `docs/audits/redaction-envelope.md` (NEW). _(landed @track/contract `f2b5f6c`; 34/34 harness tests.)_
+- [x] Cross-doc invariant: none (test rig). Depends on: none.
 
 ### 0.2 — CodeGraph 1.0.1 column-diff + CodeGraphPort smoke (O-CG-COLDIFF)
-- [ ] Diff the live `.codegraph` 0.9.7 column set vs `@colbymchenry/codegraph@1.0.1` `schema.sql`; confirm the 5 tables + `schema_versions=1`; smoke the CLI shell-out for `explore/node/callers/search`.
-- [ ] Pin `=1.0.1` exact; record the `trace`/`context` → `explore` migration + `CODEGRAPH_DIR` handling.
-- [ ] Files: `ci/probes/codegraph_coldiff.md` (NEW). Cross-doc invariant: none. Depends on: none.
+- [x] Diff the live `.codegraph` 0.9.7 column set vs `@colbymchenry/codegraph@1.0.1` `schema.sql`; confirm the 5 tables + `schema_versions` — **CORRECTION: live `MAX(version)=5`, NOT `=1`; assert `>=5`**. CLI smoke ✓ — but `search` kind → CLI `codegraph query` (NOT `codegraph search`); system codegraph is v0.9.7 (lacks `explore`/`node`).
+- [x] Pin `=1.0.1` exact (verdict: SAFE); record the `trace`/`context` → `explore` migration + `CODEGRAPH_DIR` handling.
+- [x] Files: `ci/probes/codegraph_coldiff.md` (NEW). _(landed @track/contract `f2b5f6c`.)_ Cross-doc invariant: none. Depends on: none.
 
 ### 0.3 — Federation cross-repo resolution spike (O-FED)
 - [ ] Prototype `unresolved_refs.reference_name` + namespaced `qualified_name` resolution across 2 fixture repos; measure precision; confirm the side-by-side-marked fallback path.
