@@ -1,0 +1,44 @@
+[project]
+name = "nexus-brain-core"
+version = "0.0.0"
+description = "Nexus Brain — local-first portfolio memory · retrieval · reasoning engine (core)."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pydantic>=2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "mypy>=1.11",
+    "ruff>=0.6",
+]
+
+# Virtual project: deps + dev tooling only; the flat top-level packages
+# (ports/ · testing/ · tests/) are import-rooted at core/ via pytest's
+# pythonpath, not built/installed. See core/CLAUDE.md "Module organization".
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ports", "testing", "tests"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["ports", "testing", "tests"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+    "unit: fast, isolated, deterministic unit tests",
+    "integration: cross-component integration tests",
+]
