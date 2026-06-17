@@ -59,3 +59,25 @@ A frozen Pydantic field whose name collides with an inherited attribute/method o
 Mitigation — do this for EVERY contract model: (1) declare required fields explicitly with `Field(...)` (Ellipsis) — kills any accidental attribute/method default; (2) pin required-ness for ALL non-optional fields with an **omit-each-field test** (`for f in non_optional_fields: assert constructing without f raises ValidationError`) — the generic guard that catches a shadow regardless of which name collides; (3) scope-suppress the shadow `UserWarning` at class creation *inside the model module* (`warnings.catch_warnings()` + `filterwarnings`), NOT a pytest-only `filterwarnings` (which misses the `-W error` import break). Reserved/shadowing names to watch: `register`, `copy`, `dict`, `json`, `validate`, `schema`, `construct`, `model_*`.
 
 **Rule:** Declare required contract fields with `Field(...)`, pin all required-ness with an omit-each-field test, and scope-suppress any BaseModel/ABCMeta name-shadow warning in the model module.
+
+---
+
+## <a id="4"></a>4. Serialized-file contract models pin BOTH a Python field-name snapshot AND a by-alias on-disk-key snapshot
+
+**Date:** 2026-06-17.
+**Source slice:** 1.2c1 (`07c3cba`).
+
+A contract model that is also a serialized on-disk file (e.g. `.project-brain/manifest.json`) carries TWO contracts: the Python field-name set AND the on-disk JSON-key set. When the on-disk format uses camelCase (or any alias) for some keys, the two diverge — so the §2.5-seam snapshot must pin BOTH: `set(Model.model_fields)` (Python names) AND `set(m.model_dump(by_alias=True))` (on-disk keys). The manifest's `schemaVersion`/`ingestedFromSha` are camelCase on disk but snake in Python; its other 10 keys are already snake — so put `serialization_alias`/`validation_alias` on exactly the aliased fields, not a blanket generator. Use Pydantic 2.11 `ConfigDict(validate_by_name=True, validate_by_alias=True)` — NOT the DEPRECATED `populate_by_name`, which emits a DeprecationWarning that breaks `-W error`. The model is a LENIENT reader (accepts snake or camel keys, because `validate_by_name` is required for the writer) + a STRICT writer (`by_alias` emits the canonical on-disk keys); strict on-disk key-shape rejection (wrong/duplicate keys) is the LOADER's job (startup-reconcile / migrator), not the frozen model.
+
+**Rule:** Serialized-file contract models pin two snapshots (Python field names + by-alias on-disk keys); use `validate_by_name`/`validate_by_alias` (not deprecated `populate_by_name`); the model is lenient-read / strict-write, with on-disk key-shape strictness owned by the loader.
+
+---
+
+## <a id="5"></a>5. Never suppress a quality-gate command's output — a short-circuited failure ships silently
+
+**Date:** 2026-06-17.
+**Source slice:** 1.2c2 re-gate (found E501s shipped in 1.2b `4fab4ab` + 1.2c1 `07c3cba`).
+
+A hand-rolled Step-8 gate command `uv run ruff check . >/dev/null 2>&1 && echo "ruff OK"` HIDES failures twice over: `>/dev/null 2>&1` discards ruff's findings, and `&&` short-circuits so a non-zero exit prints nothing — a failing gate looks byte-identical to a passing one. Three E501 line-length violations shipped undetected across two committed slices this way (impact was lint-only — mypy + pytest were never suppressed — but the same pattern would silently ship a type or test failure). Root enabler: the implementer hand-rolled the gate because the canonical `/preflight` can't be run verbatim — its Step-4 `mypy core` line is the stale D-A3 entry that errors on the flat `core/` layout — so hand-assembled, error-prone gate commands filled the gap.
+
+**Rule:** Run the canonical `/preflight` as Step 8 (visible output by construction); never hand-roll a gate with `>/dev/null` / `&& echo OK`. If a step must be run by hand, show its output or assert its exit code explicitly. _(enforcement: use `/preflight`; the suppressed-command pattern lives in session behavior, not committed code, so it is not grep-enforceable — the control is "use the canonical gate.")_
