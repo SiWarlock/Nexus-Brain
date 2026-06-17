@@ -25,6 +25,8 @@
 ## Carry-forward to upcoming briefs
 
 - **spec-lint template assumes letter-prefixed task IDs** *(origin: 2026-06-17 spec-lint finding; fixed in-tree @track/contract 392ed4f)* — the `spec-lint.sh brief` Task-ID extraction regex was `[A-Za-z]+[0-9]*\.[0-9]+`, which fails this project's numeric `N.M` IDs (`1.1` → `FAIL no Task ID line found`, cascading to skip the anchor-subset check). Fixed locally (letter class → optional `[A-Za-z]*`). **Upstream follow-up (out of scope now):** this is a scaffolding-TEMPLATE bug — flag to the scaffolding repo / `/scaffold-upgrade` so the template carries the fix and the next upgrade doesn't clobber the local override.
+- **`core/pyproject.toml` `requires-python = ">=3.12,<3.13"`** *(origin: 2026-06-17 1.1 / T6)* — upper bound pins to 3.12.x by design; needs a deliberate bump when the project moves to Python 3.13. Low-priority reminder, not a blocker.
+- **`.claude/commands/preflight.md` Step-4 `uv run mypy core` is known-stale** *(origin: 2026-06-17 1.1 / D-A3)* — the flat core/ layout has no `core/core/`; correct command is `uv run mypy .` (already fixed in `core/CLAUDE.md`). Editing the command file is agent-loaded config → needs owner authorization (HITL-deferred). Core implementers override Step-4 with `mypy .` until the owner resolves it.
 
 ---
 
@@ -190,8 +192,8 @@ Executed row-by-row by `/phase-exit <phase>`:
 **Track:** contract · **Depends on (phases):** 0.
 
 ### 1.1 — Determinism seams: `Clock` + `Seed`/`IdGen` ports
-- [ ] `Clock` and `Seed`/`IdGen` port interfaces + real + fake implementations; injectable everywhere (anchor revalidation, drift ranking, manifest timestamps, id minting).
-- [ ] Files: `core/ports/clock.py`, `core/ports/idgen.py` (NEW). Cross-doc invariant: NEW (`Clock`, `Seed/IdGen` — §7). Depends on: none.
+- [x] `Clock` and `Seed`/`IdGen` port interfaces + real + fake implementations; injectable everywhere (anchor revalidation, drift ranking, manifest timestamps, id minting). _(landed @track/contract `61853b3`; +`monotonic()`, +`Seed.rng()`; fakes in `core/testing/fakes.py`; 16 tests `spec(§7)`.)_
+- [x] Files: `core/ports/clock.py`, `core/ports/idgen.py` (NEW). Cross-doc invariant: NEW (`Clock`, `Seed/IdGen` — §7). Depends on: none.
 
 ### 1.2 — The data contracts: chunk schema · version stamp · manifest + registry
 - [ ] Frozen `Chunk`, store-level **version stamp**, `.project-brain/manifest.json` + global **registry** schemas (the §5 source-of-truth law: SHA-tag canonical, stamp canonical for schema/model/dim, manifest+registry derived); `schemaVersion` with a forward-only migrator + backup-before-migrate + downgrade-refuse.

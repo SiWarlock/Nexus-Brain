@@ -217,6 +217,7 @@ Cross-doc invariants (mirrored in area `CLAUDE.md`). **★ = freeze-before-fork 
 | **HostPort** | §7 | `capabilities()`·`authorize(intent)`·`perform(action)`; allowlist enum `{own_store_write\|owned_doc_refresh\|consented_host_config}`; NexusOpsHost→ActionPlan | ★ |
 | **Provider ports** | §7/§16 | EmbeddingProvider`{embed,dimension,model_version}`·Reranker`{rerank}`·ContextStrategy`{augment}`·ModelProvider`{generate+citations}` | ★ |
 | **CodeGraphPort** | §7/§11 | `query(kind,sym)` (CLI shell-out)·5-table reads·schema_versions assert·CODEGRAPH_DIR·tree-sitter fallback; pin `=1.0.1` | ★ |
+| **Clock / Seed / IdGen** | §7 | determinism seams (C-15): `Clock{now()→tz-aware UTC, monotonic()}`·`IdGen{new_id(kind)→opaque unique str}`·`Seed{rng()→seeded Random}`; real adapter + contract-faithful `Fake*` double; behavioral protocols (no field-set → no schema-snapshot) | ★ |
 | **MCP tool contract** | §14 | search/get_file/graph/list_projects/status: params(scope·project_id·top-k)·result(chip·file:line·ids·provenance)·streaming·policy-denied-marker·ingress validation | ★ |
 | **policy.yaml** | §16 | providers·privacy(local\|cloud)·MCP-boundary filter·federation visibility·session consent·`.brainignore` | ★ |
 | **Redactor** | §18 | `redact(payload, sink∈{persist,mcp_egress,cloud_egress})`; catchable-set recall floor + accepted residuals + fuzz corpus | ★ |
