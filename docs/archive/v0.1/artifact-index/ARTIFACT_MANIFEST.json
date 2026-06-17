@@ -1,0 +1,48 @@
+{
+  "bundle": "project_brain_artifacts_v0_1",
+  "created": "2026-06-07",
+  "files": [
+    {
+      "path": "00_INDEX/README_ARTIFACT_INDEX.md",
+      "source_filename": "generated",
+      "bytes": 833,
+      "sha256": "b64f446474072cf61ee026ef684a390cfa8a2861b13623815f5e0d6f4d5f70d6",
+      "lines": 19
+    },
+    {
+      "path": "01_PRD/project_brain_prd_v2_platform_native.md",
+      "source_filename": "project_brain_prd_v2_platform_native.md",
+      "bytes": 29761,
+      "sha256": "c487efa6f669c79e87fe2dfa028b251a195386f98f909ec1aaf472d482f0fd9c",
+      "lines": 1098
+    },
+    {
+      "path": "01_PRD/source_project_brain_PRD_rough.md",
+      "source_filename": "PRD.md",
+      "bytes": 130260,
+      "sha256": "691253a29c44c495aab18359bbf70ca5e849a691c1a96a40e0262926da0eae05",
+      "lines": 723
+    },
+    {
+      "path": "02_REQUIREMENTS/onboarding_and_doc_lifecycle.md",
+      "source_filename": "onboarding-and-doc-lifecycle.md",
+      "bytes": 8254,
+      "sha256": "9d4c061997125322f6f419eb5c439829a1cd9342741ef7c3babf28ac2ba49fed",
+      "lines": 101
+    },
+    {
+      "path": "03_RESEARCH/research_dossier.md",
+      "source_filename": "RESEARCH(2).md",
+      "bytes": 30772,
+      "sha256": "591e03bf8a7ad192a0ae30d489762a858f8fb06bf976859a939875dbf1bf89d6",
+      "lines": 187
+    },
+    {
+      "path": "04_PLATFORM_INTERFACE/project_brain_platform_interface_notes_v0_1.md",
+      "source_filename": "project_brain_platform_interface_notes_v0_1.md",
+      "bytes": 5000,
+      "sha256": "6a64e465370c426c8ca94406bb85f200aeac2d90dcdeaf43f0e6f34c26a415a9",
+      "lines": 199
+    }
+  ]
+}
