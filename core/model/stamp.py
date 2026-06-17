@@ -1,4 +1,4 @@
-"""The frozen store version stamp — the §5 source-of-truth contract (ARCHITECTURE.md §5, Appendix A).
+"""The frozen store version stamp — the §5 source-of-truth contract (ARCHITECTURE.md §5).
 
 ★ Freeze-before-fork contract. One `StoreVersionStamp` per LanceDB dataset.
 

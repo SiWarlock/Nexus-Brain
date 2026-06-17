@@ -147,7 +147,7 @@ def test_artifact_is_frozen() -> None:
 
 
 def test_manifest_all_required() -> None:
-    # spec(§5): every field required (LESSONS §3 omit-each guard; artifacts required but [] allowed).
+    # spec(§5): every field required (LESSONS §3 omit-each; artifacts required but [] allowed).
     for name in EXPECTED_MANIFEST_FIELDS:
         kwargs = _valid_manifest_kwargs()
         del kwargs[name]
@@ -189,7 +189,7 @@ def test_artifact_identity_min_length() -> None:
 
 
 def test_manifest_accepts_empty_artifacts() -> None:
-    # spec(§5): R-PARTIAL — a doc-less repo has zero artifacts; artifacts=[] is valid (not min_length=1).
+    # spec(§5): R-PARTIAL — a doc-less repo has zero artifacts; artifacts=[] is valid.
     kwargs = _valid_manifest_kwargs()
     kwargs["artifacts"] = []
     m = ProjectManifest(**kwargs)
