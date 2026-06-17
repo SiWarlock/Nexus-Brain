@@ -46,3 +46,16 @@ The `Fake*` double must enforce the **same contract the real adapter upholds**, 
 `IdGen.new_id(kind: str) -> str` takes a `kind` label, but the returned id is **opaque**: nothing downstream may parse `kind` (or any structure) back out of an id. The real `UuidGen` ignores `kind` entirely (uniqueness comes from `uuid4`); `FakeIdGen` uses `kind` only as an **internal** device to produce deterministic, per-kind-separated sequences — not as a parseable `kind-N` format. If a consumer or test relied on id structure it would pass against the fake and break against the real adapter (the same fidelity trap as lesson §1). Typed model fields (`Chunk.chunk_id` vs `Anchor.anchor_id`, and the forthcoming 1.3 IdKind enum) carry the kind explicitly; the id string does not.
 
 **Rule:** Treat minted ids as opaque tokens; carry `kind` in typed fields, never recover it from the id.
+
+---
+
+## <a id="3"></a>3. Contract-model field names can shadow BaseModel/ABCMeta attributes — silently optional + un-serializable
+
+**Date:** 2026-06-17.
+**Source slice:** 1.2a (`269b68e`).
+
+A frozen Pydantic field whose name collides with an inherited attribute/method of `BaseModel` (or its `ABCMeta` metaclass) is a silent, high-severity trap. In 1.2a the `Chunk.register` field (`'plain'|'deep'` dual-register) shadowed `ABCMeta.register`; Pydantic emitted a `UserWarning` AND adopted the bound method as the field's DEFAULT — so `model_fields['register'].is_required()` was `False`, omitting it constructed a method-valued instance, and `model_dump_json()` crashed (`Unable to serialize unknown type: method`). The 19-field snapshot + happy-path tests all passed because callers always supplied `register`. It is also one CI flag (`python -W error`) away from a broken import (the `UserWarning` becomes an error).
+
+Mitigation — do this for EVERY contract model: (1) declare required fields explicitly with `Field(...)` (Ellipsis) — kills any accidental attribute/method default; (2) pin required-ness for ALL non-optional fields with an **omit-each-field test** (`for f in non_optional_fields: assert constructing without f raises ValidationError`) — the generic guard that catches a shadow regardless of which name collides; (3) scope-suppress the shadow `UserWarning` at class creation *inside the model module* (`warnings.catch_warnings()` + `filterwarnings`), NOT a pytest-only `filterwarnings` (which misses the `-W error` import break). Reserved/shadowing names to watch: `register`, `copy`, `dict`, `json`, `validate`, `schema`, `construct`, `model_*`.
+
+**Rule:** Declare required contract fields with `Field(...)`, pin all required-ness with an omit-each-field test, and scope-suppress any BaseModel/ABCMeta name-shadow warning in the model module.

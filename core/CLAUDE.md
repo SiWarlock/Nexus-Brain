@@ -132,6 +132,8 @@ Several typed models in this codebase are **contracts** mirrored in `ARCHITECTUR
 | Model | `ARCHITECTURE.md` section | Notes |
 |---|---|---|
 | `Clock` / `Seed` / `IdGen` ports | §7 (Appendix A) | Determinism seams (C-15). `Clock{now()→tz-aware UTC, monotonic()}` · `IdGen{new_id(kind)→opaque unique str}` · `Seed{rng()→seeded Random}`. Each: real adapter + contract-faithful `Fake*` double (`core/testing/fakes.py`). Pinned by `core/tests/ports/test_clock.py` + `test_idgen.py` (`spec(§7)`). Behavioral protocols — no field-set, so no schema-snapshot test (unlike 1.2–1.5). |
+| `Chunk` (+ `ManifestArtifact` pattern) | §5/§8 (Appendix A) | LanceDB row contract. 19 frozen fields (snapshot `spec(§5)`); `frozen=True`, `extra="forbid"`; `chunk_id`/`created_at` caller-injected via IdGen/Clock (no default); closed sets (`doc_or_code`/`ownership`/`register`) are Literal; `anchor`/`*_sha` bare str (format owned by 1.3/stamp). FTS/BM25 = native index, not a field. Pinned by `test_chunk.py`. |
+| `StoreVersionStamp` | §5 (Appendix A) | §5 source-of-truth: canonical for `{schema,model,dim}`. 5 frozen fields (snapshot `spec(§5)`); **NO SHA field** (git-SHA = LanceDB version tag, canonical); `extra="forbid"` rejects a 2nd SHA home. `dimension`/`schema_version` PositiveInt; `embedding_model`/`source_root_hash` min_length=1; `index_built_at` AwareDatetime/Clock. Pinned by `test_stamp.py`. |
 
 <!-- Populated as contract models land. -->
 
@@ -182,6 +184,7 @@ Lessons start at §1.
 |--:|---|---|---|
 | 1 | 2026-06-17 | [Ports = Protocol + real + Fake double](LESSONS.md#1) | Every port is a `Protocol` with a real adapter + a contract-faithful `Fake*` double in `core/testing/fakes.py`; inject by constructor, never construct/read inline. _(pin: `core/tests/ports/test_*.py` `*_conform`; pattern: forbidden-rule 4)_ |
 | 2 | 2026-06-17 | [Minted ids are opaque](LESSONS.md#2) | `kind` is a minting hint, never recoverable from the id; typed fields carry kind. _(accepted: not mechanically grep-enforceable)_ |
+| 3 | 2026-06-17 | [Field names can shadow BaseModel/ABCMeta](LESSONS.md#3) | Declare required fields with `Field(...)`; pin all required-ness with an omit-each-field test; scope-suppress shadow warnings in the model module (not pytest-only). _(pin: per-model omit-each tests; watch `register`/`copy`/`dict`/`json`/`schema`/`validate`/`model_*`)_ |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 
