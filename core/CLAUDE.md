@@ -50,8 +50,11 @@ Don't paste these sections into the prompt. Grep the file:section, read only wha
 
 | Topic | File (relative to repo root) | Section |
 |---|---|---|
-| <subsystem A> | `ARCHITECTURE.md` | §X |
-| <subsystem B> | `ARCHITECTURE.md` | §Y |
+| Ports & adapter contracts (incl. Clock/Seed/IdGen determinism seams) | `ARCHITECTURE.md` | §7 |
+| Data & state model (chunk schema · version stamp · manifest/registry · source-of-truth law) | `ARCHITECTURE.md` | §5 |
+| Grounding · anchors · provenance (north star) | `ARCHITECTURE.md` | §10 |
+| Model / contract inventory (freeze-before-fork ★) | `ARCHITECTURE.md` | Appendix A |
+| CodeGraph column-diff + CLI smoke (spike 0.2) | `ci/probes/codegraph_coldiff.md` | — |
 | Lessons logged (full prose) | `core/LESSONS.md` | by lesson # |
 
 <!-- Starts near-empty. Add a row whenever a topic is looked up twice. -->
@@ -84,10 +87,10 @@ uv run pytest
 # Quality
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy core
+uv run mypy .
 
 # Preflight (use before saying "done" with a feature)
-uv run ruff check . && uv run mypy core && uv run pytest
+uv run ruff check . && uv run mypy . && uv run pytest
 ```
 
 ## TDD protocol
@@ -128,9 +131,9 @@ Several typed models in this codebase are **contracts** mirrored in `ARCHITECTUR
 
 | Model | `ARCHITECTURE.md` section | Notes |
 |---|---|---|
-| <model> | §X | <field summary> |
+| `Clock` / `Seed` / `IdGen` ports | §7 (Appendix A) | Determinism seams (C-15). `Clock{now()→tz-aware UTC, monotonic()}` · `IdGen{new_id(kind)→opaque unique str}` · `Seed{rng()→seeded Random}`. Each: real adapter + contract-faithful `Fake*` double (`core/testing/fakes.py`). Pinned by `core/tests/ports/test_clock.py` + `test_idgen.py` (`spec(§7)`). Behavioral protocols — no field-set, so no schema-snapshot test (unlike 1.2–1.5). |
 
-<!-- Starts empty (or with the first model if one exists). Populated as contract models land. -->
+<!-- Populated as contract models land. -->
 
 ## Module organization
 
@@ -177,7 +180,8 @@ Lessons start at §1.
 
 | # | Date | Topic | Rule (one-liner) |
 |--:|---|---|---|
-| | | | |
+| 1 | 2026-06-17 | [Ports = Protocol + real + Fake double](LESSONS.md#1) | Every port is a `Protocol` with a real adapter + a contract-faithful `Fake*` double in `core/testing/fakes.py`; inject by constructor, never construct/read inline. _(pin: `core/tests/ports/test_*.py` `*_conform`; pattern: forbidden-rule 4)_ |
+| 2 | 2026-06-17 | [Minted ids are opaque](LESSONS.md#2) | `kind` is a minting hint, never recoverable from the id; typed fields carry kind. _(accepted: not mechanically grep-enforceable)_ |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 
