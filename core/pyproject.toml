@@ -28,12 +28,12 @@ line-length = 100
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["ports", "testing", "tests"]
+known-first-party = ["ports", "model", "testing", "tests"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["ports", "testing", "tests"]
+files = ["ports", "model", "testing", "tests"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
