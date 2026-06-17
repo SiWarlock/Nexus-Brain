@@ -24,7 +24,7 @@
 
 ## Carry-forward to upcoming briefs
 
-_(Empty at project start; populated as Step-9 routing surfaces operational items.)_
+- **spec-lint template assumes letter-prefixed task IDs** *(origin: 2026-06-17 spec-lint finding; fixed in-tree @track/contract 392ed4f)* — the `spec-lint.sh brief` Task-ID extraction regex was `[A-Za-z]+[0-9]*\.[0-9]+`, which fails this project's numeric `N.M` IDs (`1.1` → `FAIL no Task ID line found`, cascading to skip the anchor-subset check). Fixed locally (letter class → optional `[A-Za-z]*`). **Upstream follow-up (out of scope now):** this is a scaffolding-TEMPLATE bug — flag to the scaffolding repo / `/scaffold-upgrade` so the template carries the fix and the next upgrade doesn't clobber the local override.
 
 ---
 
