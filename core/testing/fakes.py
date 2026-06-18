@@ -12,6 +12,7 @@ import random
 from collections.abc import Iterable, Sequence
 from datetime import datetime, timedelta
 
+from ports.codegraph import CodeGraphQueryKind, CodeGraphResult
 from ports.host import HostAction, HostCapability, HostDenied, HostIntent, HostResult
 from ports.providers import Citation, GenerateResult, RerankResult
 
@@ -171,3 +172,20 @@ class FakeModelProvider:
 
     def generate(self, prompt: str) -> GenerateResult:
         return GenerateResult(text=self._text, citations=list(self._citations))
+
+
+class FakeCodeGraph:
+    """Deterministic `CodeGraphPort` double — canned per-kind results (configurable).
+
+    Same (kind, sym) → same result (no wall-clock/RNG). A `results` map supplies a canned
+    `CodeGraphResult` per kind; for kinds with no canned result, `query` echoes the requested
+    symbol back as the single result (a stable, contract-shaped default).
+    """
+
+    def __init__(self, results: dict[CodeGraphQueryKind, CodeGraphResult] | None = None) -> None:
+        self._results = dict(results) if results is not None else {}
+
+    def query(self, kind: CodeGraphQueryKind, sym: str) -> CodeGraphResult:
+        if kind in self._results:
+            return self._results[kind]
+        return CodeGraphResult(kind=kind, symbols=(sym,))
