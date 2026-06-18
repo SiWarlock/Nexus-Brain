@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import hashlib
 import random
+import re
 from collections.abc import Callable, Iterable, Sequence
 from datetime import datetime, timedelta
 
+from model.redactor_iface import Sink
 from ports.codegraph import CodeGraphQueryKind, CodeGraphResult
 from ports.events import Event
 from ports.host import HostAction, HostCapability, HostDenied, HostIntent, HostResult
@@ -237,6 +239,34 @@ class FakeSecretStore:
         if ref.account not in self._secrets:
             raise SecretNotFoundError(f"no secret for account={ref.account!r}")
         return self._secrets[ref.account]
+
+
+class FakeRedactor:
+    """Deterministic `Redactor` double — observably strips obvious prefix-tokened credentials.
+
+    A TEST DOUBLE, NOT the catchable-set engine (that is Phase-2.3 + its fuzz gate) — it makes NO
+    recall/FP claim and intentionally misses the entropy/JSON/env classes. Its job is to be a
+    contract-faithful stand-in (LESSON 1 fidelity — no looser fake on a safety seam): it upholds
+    every behavioral invariant the real engine must —
+      - idempotent — replaces matched tokens with a fixed marker that the pattern can't re-match;
+      - never raises — `re.sub` tolerates any input string (empty / NUL+control / long / non-ASCII);
+      - git-SHA passthrough — the credential prefixes (`ghp_`, `github_pat_`, `sk-`, `xoxb-`) cannot
+        occur inside bare hex, so a 40/64-char SHA always survives (§18 / D-14 zero-tolerance);
+      - pure — in-memory string substitution, no network / no file I/O (safety rule #6).
+    `sink` is accepted but applies NO per-sink strictness (D-A5/D-A6 owner-deferred — the param is
+    here so the signature accommodates a future cloud-stricter engine, not to branch on it now).
+    """
+
+    # Prefix-tokened credential shapes only — deliberately narrow; entropy/JSON/env classes are the
+    # real engine's job. Anchored on the canonical (lowercase) credential prefixes, matched
+    # case-sensitively: real PATs/keys are lowercase-prefixed, and each prefix carries a `-`/`_`
+    # that can never occur in bare hex, so git SHAs (any case) are passthrough-safe by construction.
+    # A deliberately upper-cased prefix is not a real token and is (correctly) left untouched.
+    _TOKEN_RE = re.compile(r"(?:github_pat_|ghp_|sk-|xoxb-)[A-Za-z0-9_-]+")
+    _MARKER = "[REDACTED]"
+
+    def redact(self, payload: str, sink: Sink) -> str:
+        return self._TOKEN_RE.sub(self._MARKER, payload)
 
 
 class FakeObservabilitySink:
