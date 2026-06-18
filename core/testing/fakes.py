@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import hashlib
 import random
+from collections.abc import Iterable
 from datetime import datetime, timedelta
+
+from ports.host import HostAction, HostCapability, HostDenied, HostIntent, HostResult
 
 
 class FakeClock:
@@ -71,3 +74,35 @@ class FakeSeed:
         a continuing stream.
         """
         return random.Random(self._seed)
+
+
+class FakeHost:
+    """Deterministic, fail-closed `HostPort` double — the safety-seam fake every track injects.
+
+    Upholds the SAME fail-closed allowlist contract a real host must (LESSON 1 fidelity — no looser
+    fake on a safety seam, Key safety rule #4): `authorize` denies any capability outside the
+    configured allowlist with `HostDenied`; `perform` executes ONLY an authorized action AND
+    re-validates the capability allowlist (so a forged `authorized=True` for a non-allowlisted
+    capability is still denied), recording performed actions for test assertions.
+    """
+
+    def __init__(self, capabilities: Iterable[HostCapability] = ()) -> None:
+        self._capabilities = frozenset(capabilities)
+        self.performed: list[HostAction] = []
+
+    def capabilities(self) -> frozenset[HostCapability]:
+        return self._capabilities
+
+    def authorize(self, intent: HostIntent) -> HostAction:
+        if intent.capability not in self._capabilities:
+            raise HostDenied(f"capability {intent.capability.value!r} not in host allowlist")
+        return HostAction(capability=intent.capability, summary=intent.summary, authorized=True)
+
+    def perform(self, action: HostAction) -> HostResult:
+        if not action.authorized:
+            raise HostDenied("perform requires an action produced by authorize (forged rejected)")
+        # defense in depth: never run a non-allowlisted capability even if `authorized` is forged.
+        if action.capability not in self._capabilities:
+            raise HostDenied(f"capability {action.capability.value!r} not in host allowlist")
+        self.performed.append(action)
+        return HostResult(ok=True, detail=f"performed {action.capability.value}")
