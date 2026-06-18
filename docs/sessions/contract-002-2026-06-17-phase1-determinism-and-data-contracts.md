@@ -5,7 +5,7 @@
 - **Track:** contract (`track/contract`)
 - **Role:** implementer (`contract-core-implementer`)
 - **Predecessor session:** none (first implementer session on this track). Companion: orchestrator handoff `contract-001-2026-06-17-phase1-contracts.md`.
-- **Successor session:** TBD — fresh team respawned for the rest of Phase 1.
+- **Successor session:** `contract-003-2026-06-18-trust-contracts-and-port-freeze.md` (Phase 1.3 trust contracts + Phase 1.4 the 11-port freeze).
 
 ## Why this session existed
 
