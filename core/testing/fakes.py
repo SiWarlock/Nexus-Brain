@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import hashlib
 import random
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from datetime import datetime, timedelta
 
 from ports.host import HostAction, HostCapability, HostDenied, HostIntent, HostResult
+from ports.providers import Citation, GenerateResult, RerankResult
 
 
 class FakeClock:
@@ -106,3 +107,67 @@ class FakeHost:
             raise HostDenied(f"capability {action.capability.value!r} not in host allowlist")
         self.performed.append(action)
         return HostResult(ok=True, detail=f"performed {action.capability.value}")
+
+
+class FakeEmbeddingProvider:
+    """Deterministic `EmbeddingProvider` — a stable vector per text (no wall-clock/RNG)."""
+
+    def __init__(self, dimension: int = 8, model_version: str = "fake-embed-v1") -> None:
+        # Enforce the §5 dimension floor — a 0/negative-dim fake emits [] vectors that pass shape
+        # assertions trivially and could mask a real dim-mismatch (LESSON 1: no looser fake).
+        if dimension < 1:
+            raise ValueError("FakeEmbeddingProvider dimension must be >= 1")
+        self._dimension = dimension
+        self._model_version = model_version
+
+    @property
+    def dimension(self) -> int:
+        return self._dimension
+
+    @property
+    def model_version(self) -> str:
+        return self._model_version
+
+    def embed(self, texts: Sequence[str]) -> list[list[float]]:
+        return [self._vector(t) for t in texts]
+
+    def _vector(self, text: str) -> list[float]:
+        # Deterministic per-text vector: expand a sha256 digest to `dimension` floats in [0, 1].
+        digest = hashlib.sha256(text.encode()).digest()
+        return [digest[i % len(digest)] / 255.0 for i in range(self._dimension)]
+
+
+class FakeReranker:
+    """Deterministic `Reranker` — a stable per-(query, doc) score, sorted score-desc."""
+
+    def rerank(self, query: str, documents: Sequence[str]) -> list[RerankResult]:
+        scored = [
+            RerankResult(index=i, score=self._score(query, d)) for i, d in enumerate(documents)
+        ]
+        return sorted(scored, key=lambda r: r.score, reverse=True)
+
+    def _score(self, query: str, doc: str) -> float:
+        digest = hashlib.sha256(f"{query}\x00{doc}".encode()).hexdigest()
+        return int(digest[:8], 16) / 0xFFFFFFFF
+
+
+class FakeContextStrategy:
+    """Deterministic `ContextStrategy` — prepends the document-context blurb to the chunk."""
+
+    def augment(self, chunk_text: str, document_context: str) -> str:
+        return f"{document_context}\n\n{chunk_text}"
+
+
+class FakeModelProvider:
+    """Deterministic `ModelProvider` — canned answer text + citations (no live generation)."""
+
+    def __init__(
+        self, text: str = "fake generated answer", citations: list[Citation] | None = None
+    ) -> None:
+        self._text = text
+        default = [Citation(cited_text="fake cite", source_index=0)]
+        # copy: don't alias the caller's list (post-construction mutation must not bleed in).
+        self._citations = list(default if citations is None else citations)
+
+    def generate(self, prompt: str) -> GenerateResult:
+        return GenerateResult(text=self._text, citations=list(self._citations))
