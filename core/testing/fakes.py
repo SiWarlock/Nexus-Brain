@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import hashlib
 import random
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from datetime import datetime, timedelta
 
 from ports.codegraph import CodeGraphQueryKind, CodeGraphResult
+from ports.events import Event
 from ports.host import HostAction, HostCapability, HostDenied, HostIntent, HostResult
+from ports.observability import ObsEvent
 from ports.providers import Citation, GenerateResult, RerankResult
+from ports.secrets import SecretNotFoundError, SecretRef
 
 
 class FakeClock:
@@ -189,3 +192,58 @@ class FakeCodeGraph:
         if kind in self._results:
             return self._results[kind]
         return CodeGraphResult(kind=kind, symbols=(sym,))
+
+
+class FakeEventSource:
+    """Deterministic `EventSource` — `poll` and `subscribe` consume the SAME pending queue.
+
+    Both paths deliver-and-drain the queue, so they share one consistent view-of-world (poll then
+    subscribe on the same instance correctly sees zero events the second time).
+    """
+
+    def __init__(self, events: Sequence[Event] = ()) -> None:
+        self._queue: list[Event] = list(events)
+
+    def poll(self) -> tuple[Event, ...]:
+        drained = tuple(self._queue)
+        self._queue.clear()
+        return drained
+
+    def subscribe(self, handler: Callable[[Event], None]) -> None:
+        drained = tuple(self._queue)
+        self._queue.clear()
+        for event in drained:
+            handler(event)
+
+
+class FakeSecretStore:
+    """Deterministic `SecretStore` double — in-memory test secrets resolved by ref.
+
+    Secrets live OUT-OF-BAND in a private dict (never on the `SecretRef`, never in `repr`).
+    `get_ref` returns coordinates; `resolve` returns the transient plaintext (Key safety rule #3)
+    and fails closed with `SecretNotFoundError` on an unknown ref (never a silent empty string).
+    """
+
+    def __init__(
+        self, secrets: dict[str, str] | None = None, service: str = "nexus-brain-test"
+    ) -> None:
+        self._service = service
+        self._secrets = dict(secrets) if secrets is not None else {}
+
+    def get_ref(self, name: str) -> SecretRef:
+        return SecretRef(service=self._service, account=name)
+
+    def resolve(self, ref: SecretRef) -> str:
+        if ref.account not in self._secrets:
+            raise SecretNotFoundError(f"no secret for account={ref.account!r}")
+        return self._secrets[ref.account]
+
+
+class FakeObservabilitySink:
+    """`ObservabilitySink` double — records emitted events LOCALLY (never network)."""
+
+    def __init__(self) -> None:
+        self.emitted: list[ObsEvent] = []
+
+    def emit(self, event: ObsEvent) -> None:
+        self.emitted.append(event)
