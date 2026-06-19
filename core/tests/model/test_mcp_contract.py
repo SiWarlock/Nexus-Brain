@@ -10,21 +10,60 @@ registry-scope authz + egress redaction + loopback transport are the Phase-8 bou
 
 from __future__ import annotations
 
+from typing import Any, get_args
+
 import pytest
 from pydantic import ValidationError
 
+from model.evidence import EvidenceRef
 from model.mcp_contract import (
     MAX_QUERY_LEN,
+    MAX_RESPONSE_ITEMS,
     MAX_TOP_K,
     GetFileParams,
     GraphParams,
     ListProjectsParams,
+    McpResult,
+    McpResultItem,
+    McpToolResult,
+    PolicyDenied,
     RetrievalScope,
     SearchParams,
     StatusParams,
 )
+from model.provenance import ProvenancePacket
 
 pytestmark = pytest.mark.unit
+
+
+def _evidence_ref_kwargs() -> dict[str, Any]:
+    # A valid EvidenceRef payload (the §10 chip the MCP result composes).
+    return {"type": "code", "label": "auth handler", "resource_ref": "chunk-1", "confidence": 0.9}
+
+
+def _provenance_kwargs() -> dict[str, Any]:
+    # A valid ProvenancePacket payload (the §10 grounding record on every answer).
+    return {
+        "project_ids": ["proj-1"],
+        "source_ids": ["src-1"],
+        "citations": ["src/auth.py:10-20"],
+        "commit_shas": ["deadbeef"],
+        "session_ids": ["sess-1"],
+        "index_freshness": "fresh",
+        "confidence": 0.8,
+        "drift_markers": [],
+        "evidence": [_evidence_ref_kwargs()],
+    }
+
+
+def _result_item_kwargs() -> dict[str, Any]:
+    # A valid McpResultItem payload (chip + file:line + ids).
+    return {"chip": _evidence_ref_kwargs(), "file_line": "src/auth.py:10-20", "ids": ["chunk-1"]}
+
+
+def _result_kwargs() -> dict[str, Any]:
+    # A valid McpResult payload (one item + a provenance packet).
+    return {"items": [_result_item_kwargs()], "provenance": _provenance_kwargs()}
 
 
 def test_retrieval_scope_values() -> None:
@@ -151,3 +190,113 @@ def test_bounds_constants() -> None:
     # LESSON 10 spirit: a future loosening of an ingress bound must be a visible, breaking change.
     assert MAX_TOP_K == 100
     assert MAX_QUERY_LEN == 4096
+
+
+# ── 1.5c2 — the result half (McpResultItem / McpResult / PolicyDenied) ──────────────────────────
+
+
+def test_mcp_result_item_composes_evidence_ref() -> None:
+    # spec(§14): chip + file:line + ids result element; composes the 1.3c EvidenceRef (LESSON 8
+    # nested coercion from a dict); file_line/ids elements strip + reject empty (LESSON 7).
+    assert set(McpResultItem.model_fields) == {"chip", "file_line", "ids"}
+    item = McpResultItem.model_validate(_result_item_kwargs())
+    assert isinstance(item.chip, EvidenceRef)
+    assert item.chip.label == "auth handler"
+    assert item.file_line == "src/auth.py:10-20"
+    assert item.ids == ("chunk-1",)  # coerced to a tuple (LESSON 8)
+    stripped = McpResultItem.model_validate(
+        {**_result_item_kwargs(), "file_line": "  f:1  ", "ids": ["  c1  "]}
+    )
+    assert stripped.file_line == "f:1" and stripped.ids == ("c1",)  # LESSON 7 strip
+    bad_payloads = (
+        {**_result_item_kwargs(), "file_line": ""},
+        {**_result_item_kwargs(), "file_line": "   "},  # whitespace-only (LESSON 7)
+        {**_result_item_kwargs(), "ids": [""]},
+        {**_result_item_kwargs(), "ids": ["   "]},  # whitespace-only id element
+    )
+    for bad in bad_payloads:
+        with pytest.raises(ValidationError):
+            McpResultItem.model_validate(bad)
+
+
+def test_mcp_result_envelope() -> None:
+    # spec(§14): result envelope = items tuple (empty-valid) + composed ProvenancePacket + a
+    # truncated flag (default False). §10 composition; LESSON 8 nested coercion.
+    assert set(McpResult.model_fields) == {"items", "provenance", "truncated"}
+    r = McpResult.model_validate(_result_kwargs())
+    assert isinstance(r.items, tuple) and isinstance(r.items[0], McpResultItem)
+    assert isinstance(r.provenance, ProvenancePacket)
+    assert r.truncated is False  # fail-safe default
+    empty = McpResult.model_validate({"items": [], "provenance": _provenance_kwargs()})
+    assert empty.items == ()  # empty-valid (an ungrounded/zero-hit answer)
+
+
+def test_policy_denied_marker() -> None:
+    # spec(§14): policy-denied is a returned VALUE marker, NOT a raised exception (a raise would
+    # look like a tool failure, not a policy outcome). denied=Literal[True] can't pose as non-deny;
+    # a tool's contract return is the union McpResult | PolicyDenied.
+    assert set(PolicyDenied.model_fields) == {"denied", "reason"}
+    d = PolicyDenied(reason="cloud egress blocked by policy")
+    assert d.denied is True
+    assert d.reason == "cloud egress blocked by policy"
+    with pytest.raises(ValidationError):
+        PolicyDenied.model_validate({"denied": False, "reason": "x"})  # Literal[True] rejects False
+    with pytest.raises(ValidationError):
+        PolicyDenied.model_validate({})  # reason required (LESSON 3 omit-each; denied defaults)
+    assert set(get_args(McpToolResult)) == {McpResult, PolicyDenied}
+
+
+def test_result_deep_immutable() -> None:
+    # LESSON 8: deep immutability + nested parse-don't-trust. Mutating items / a nested chip field /
+    # provenance raises; a bad nested element (EvidenceRef with an extra key) is rejected at parse.
+    r = McpResult.model_validate(_result_kwargs())
+    with pytest.raises(ValidationError):
+        r.items = ()  # frozen container
+    with pytest.raises(ValidationError):
+        r.items[0].chip.label = "x"  # deep-frozen nested chip
+    with pytest.raises(ValidationError):
+        r.provenance.confidence = 0.1  # deep-frozen nested provenance
+    bad_chip = {**_result_item_kwargs(), "chip": {"type": "c", "label": "l", "extra_bad": 1}}
+    with pytest.raises(ValidationError):
+        McpResultItem.model_validate(bad_chip)  # nested EvidenceRef extra="forbid"
+    # nested ProvenancePacket parse-don't-trust: a malformed provenance (a required field omitted)
+    # is rejected at parse — the §10 grounding record can't slip in half-formed (LESSON 8).
+    bad_prov = {k: v for k, v in _provenance_kwargs().items() if k != "index_freshness"}
+    with pytest.raises(ValidationError):
+        McpResult.model_validate({"items": [_result_item_kwargs()], "provenance": bad_prov})
+
+
+def test_result_json_roundtrip() -> None:
+    # LESSON 8: dict + JSON-string round-trips preserve equality (the egress/persistence path —
+    # tuple → array → tuple, nested models coerce back).
+    r = McpResult.model_validate(
+        {"items": [_result_item_kwargs()], "provenance": _provenance_kwargs(), "truncated": True}
+    )
+    assert McpResult.model_validate(r.model_dump()) == r
+    assert McpResult.model_validate_json(r.model_dump_json()) == r
+
+
+def test_response_bound_constant() -> None:
+    # §14 "bound response sizes": MAX_RESPONSE_ITEMS named constant (a future loosening is a
+    # visible, test-breaking change — LESSON 10 spirit). The contract ENFORCES the cap (over-bound
+    # raises — defense-in-depth, like MAX_TOP_K); Phase-8.2 owns the truncation LOGIC + truncated.
+    assert MAX_RESPONSE_ITEMS == 500
+    over = [_result_item_kwargs()] * (MAX_RESPONSE_ITEMS + 1)
+    with pytest.raises(ValidationError):
+        McpResult.model_validate({"items": over, "provenance": _provenance_kwargs()})
+
+
+def test_result_models_frozen_extra_forbid() -> None:
+    # parse-don't-trust §4: the 3 new models frozen + extra="forbid" (tested with a VALID base
+    # payload + an extra key, so the rejection is the extra key — not a missing-required error).
+    d = PolicyDenied(reason="r")
+    with pytest.raises(ValidationError):
+        d.reason = "other"  # frozen
+    payloads = (
+        (McpResultItem, {**_result_item_kwargs(), "x": 1}),
+        (McpResult, {"items": [], "provenance": _provenance_kwargs(), "x": 1}),
+        (PolicyDenied, {"denied": True, "reason": "r", "x": 1}),
+    )
+    for model, payload in payloads:
+        with pytest.raises(ValidationError):
+            model.model_validate(payload)
