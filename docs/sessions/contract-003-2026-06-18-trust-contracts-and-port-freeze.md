@@ -1,6 +1,6 @@
 # contract-003 — 2026-06-18 — Phase 1.3 trust contracts + Phase 1.4 the 11-port freeze
 
-> Implementer-side session doc (track: contract). **Predecessor:** `contract-002-2026-06-17-phase1-determinism-and-data-contracts.md`. **Successor:** _(none yet — END-OF-1.4 cycle; a fresh full-runway team takes 1.5 + the before-fork sweep + spikes 0.3/0.4 + `/phase-exit 1` + merge)._
+> Implementer-side session doc (track: contract). **Predecessor:** `contract-002-2026-06-17-phase1-determinism-and-data-contracts.md`. **Successor:** [`contract-005-2026-06-20-phase1.5-boundary-contracts-and-1.6-hardening-sweep.md`](contract-005-2026-06-20-phase1.5-boundary-contracts-and-1.6-hardening-sweep.md) (Task 1.5 boundary contracts + the 1.6 before-fork sweep).
 
 ## Why this session existed
 
