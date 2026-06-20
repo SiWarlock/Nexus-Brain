@@ -19,12 +19,11 @@ minimal `Citation` shape here narrows additively.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Annotated, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, NonNegativeInt, StringConstraints
+from pydantic import BaseModel, ConfigDict, NonNegativeInt
 
-# LESSON 7: result-type identity strings strip surrounding whitespace + reject empty / whitespace.
-_StrippedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+from _types import TextStr
 
 
 class RerankResult(BaseModel):
@@ -49,7 +48,7 @@ class Citation(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    cited_text: _StrippedStr
+    cited_text: TextStr
     source_index: NonNegativeInt
 
 
@@ -58,7 +57,7 @@ class GenerateResult(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    text: _StrippedStr
+    text: TextStr
     citations: list[Citation]
 
 

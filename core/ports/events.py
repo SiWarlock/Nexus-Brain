@@ -8,12 +8,11 @@ where consumed. This slice freezes the interface + the frozen `Event` type + `Fa
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Annotated, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict
 
-# LESSON 7: identity strings strip surrounding whitespace + reject empty / whitespace-only.
-_StrippedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+from _types import IdentityStr
 
 
 class Event(BaseModel):
@@ -21,8 +20,8 @@ class Event(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    kind: _StrippedStr  # the event type (e.g. file_changed)
-    source: _StrippedStr  # the origin (e.g. git_hook / watcher)
+    kind: IdentityStr  # the event type (e.g. file_changed)
+    source: IdentityStr  # the origin (e.g. git_hook / watcher)
 
 
 @runtime_checkable

@@ -7,12 +7,11 @@ Behavioral port (LESSON 1). The real OTel sink is OFF-BY-DEFAULT + LOCAL-ONLY an
 
 from __future__ import annotations
 
-from typing import Annotated, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict
 
-# LESSON 7: identity strings strip surrounding whitespace + reject empty / whitespace-only.
-_StrippedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+from _types import IdentityStr
 
 
 class ObsEvent(BaseModel):
@@ -24,8 +23,8 @@ class ObsEvent(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    name: _StrippedStr
-    attributes: tuple[tuple[_StrippedStr, str], ...]
+    name: IdentityStr
+    attributes: tuple[tuple[IdentityStr, str], ...]
 
 
 @runtime_checkable

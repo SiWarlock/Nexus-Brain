@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, PositiveInt
 
+from _types import IdentityStr
+
 
 class StoreVersionStamp(BaseModel):
     """The one-per-dataset version stamp (immutable, closed).
@@ -27,8 +29,8 @@ class StoreVersionStamp(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    embedding_model: str = Field(min_length=1)  # terminal source-of-truth id (federation gate)
+    embedding_model: IdentityStr  # terminal source-of-truth id (federation gate)
     dimension: PositiveInt = Field(...)
     schema_version: PositiveInt = Field(...)
     index_built_at: AwareDatetime = Field(...)
-    source_root_hash: str = Field(min_length=1)  # terminal source-of-truth id (generation identity)
+    source_root_hash: IdentityStr  # terminal source-of-truth id (generation identity)

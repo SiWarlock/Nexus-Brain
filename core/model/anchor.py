@@ -15,21 +15,11 @@ validated here (mirroring Chunk's bare `anchor`/`*_sha`). `anchor_id` is caller-
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated, Self
+from typing import Self
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    PositiveInt,
-    StringConstraints,
-    model_validator,
-)
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, model_validator
 
-# Every §5/§10 identity/path string field strips surrounding whitespace and rejects empty /
-# whitespace-only (the before-fork sweep). A whitespace-loose identity in a frozen cross-track
-# contract is a Finding.
-IdentityStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+from _types import IdentityStr
 
 
 class AnchorState(StrEnum):

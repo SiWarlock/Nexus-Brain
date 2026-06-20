@@ -150,3 +150,44 @@ def test_chunk_json_roundtrip() -> None:
     # (the real LanceDB persist→reload boundary), which python-mode dump/validate skips.
     c = Chunk(**_valid_kwargs())
     assert Chunk.model_validate_json(c.model_dump_json()) == c
+
+
+def test_chunk_identity_fields_hardened() -> None:
+    # 1.6a: the §5 gap — chunk identity fields were BARE `str` (pre-LESSON-7, zero validation). Now
+    # the shared IdentityStr: every identity field rejects empty / whitespace-only / control / NUL,
+    # and strips surrounding whitespace.
+    identity_fields = (
+        "chunk_id",
+        "project_id",
+        "source_path",
+        "producer",
+        "doc_type",
+        "anchor",
+        "content_hash",
+        "last_resolved_sha",
+        "ingested_from_sha",
+        "embedding_model_version",
+    )
+    for field in identity_fields:
+        for bad in ("", "   ", "x\x00y"):
+            kwargs = _valid_kwargs()
+            kwargs[field] = bad
+            with pytest.raises(ValidationError):
+                Chunk(**kwargs)
+    kwargs = _valid_kwargs()
+    kwargs["chunk_id"] = "  chunk-0001  "
+    assert Chunk(**kwargs).chunk_id == "chunk-0001"  # strip
+
+
+def test_chunk_content_fields_use_textstr() -> None:
+    # 1.6a: content fields (text, context_blurb) use TextStr — inline newline is legitimate, but NUL
+    # and empty are rejected (was bare `str`, which admitted both).
+    kwargs = _valid_kwargs()
+    kwargs["text"] = "line1\nline2"
+    assert "\n" in Chunk(**kwargs).text  # inline newline is legitimate for content
+    for field in ("text", "context_blurb"):
+        for bad in ("", "a\x00b"):
+            kwargs = _valid_kwargs()
+            kwargs[field] = bad
+            with pytest.raises(ValidationError):
+                Chunk(**kwargs)

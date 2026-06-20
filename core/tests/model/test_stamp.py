@@ -126,3 +126,18 @@ def test_stamp_json_roundtrip() -> None:
     # (the real LanceDB persist→reload boundary).
     s = StoreVersionStamp(**_valid_kwargs())
     assert StoreVersionStamp.model_validate_json(s.model_dump_json()) == s
+
+
+def test_stamp_strip_and_control_reject() -> None:
+    # 1.6a: the §5 strip gap — stamp identity fields were Field(min_length=1) WITHOUT strip (so
+    # "   " slipped through). Now the shared IdentityStr: strips, rejects whitespace-only +
+    # control/NUL. Representative §5 coverage (manifest/registry share the SAME hardened alias).
+    for field in ("embedding_model", "source_root_hash"):
+        for bad in ("   ", "x\x00y", "x\x1fy"):
+            kwargs = _valid_kwargs()
+            kwargs[field] = bad
+            with pytest.raises(ValidationError):
+                StoreVersionStamp(**kwargs)
+    kwargs = _valid_kwargs()
+    kwargs["embedding_model"] = "  qwen3-embedding-4b  "
+    assert StoreVersionStamp(**kwargs).embedding_model == "qwen3-embedding-4b"  # strip

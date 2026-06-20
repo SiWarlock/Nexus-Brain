@@ -14,6 +14,8 @@ from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
+from _types import IdentityStr, TextStr
+
 # `register` (a canonical Appendix-A / DATA_MODEL field name) collides with BaseModel's
 # metaclass attribute ABCMeta.register. Left implicit, Pydantic adopts that bound method as the
 # field's default — silently making `register` optional + un-JSON-serializable. We pin it
@@ -36,22 +38,22 @@ with warnings.catch_warnings():
 
         model_config = ConfigDict(frozen=True, extra="forbid")
 
-        chunk_id: str
-        project_id: str
-        source_path: str
+        chunk_id: IdentityStr
+        project_id: IdentityStr
+        source_path: IdentityStr
         doc_or_code: Literal["doc", "code"]
-        producer: str  # open-ended (classifier may grow): gstack | CE | human | ...
-        doc_type: str  # open-ended (classifier may grow): architecture | guide | adr | ...
+        producer: IdentityStr  # open-ended (classifier may grow): gstack | CE | human | ...
+        doc_type: IdentityStr  # open-ended (classifier may grow): architecture | guide | adr | ...
         ownership: Literal["owned", "foreign", "supplemental"]
         register: Literal["plain", "deep"] = Field(...)  # required; Field(...) defeats the shadow
-        text: str
+        text: TextStr
         vector: list[float]  # dim/finiteness pinned by the Phase-3.1 Vector(dim) binding, not here
-        anchor: str  # file:line[-line] span; the 1.3 Anchor references this, not embedded here
-        content_hash: str
-        last_resolved_sha: str
-        ingested_from_sha: str
-        embedding_model_version: str
-        context_blurb: str | None = None  # Contextual-Retrieval prefix (code chunks); optional
+        anchor: IdentityStr  # file:line[-line] span; the 1.3 Anchor references this, not embedded
+        content_hash: IdentityStr
+        last_resolved_sha: IdentityStr
+        ingested_from_sha: IdentityStr
+        embedding_model_version: IdentityStr
+        context_blurb: TextStr | None = None  # Contextual-Retrieval prefix (code chunks); optional
         generation: int
         tombstone: bool
         created_at: AwareDatetime

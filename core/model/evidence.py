@@ -11,13 +11,9 @@ DEFERRED — see the EvidenceType marker below.
 
 from __future__ import annotations
 
-from typing import Annotated
+from pydantic import BaseModel, ConfigDict, Field
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
-
-# LESSON 7: every §5/§10 identity/path string strips surrounding whitespace + rejects empty /
-# whitespace-only (a whitespace-loose identity in a frozen cross-track contract is a Finding).
-_StrippedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+from _types import IdentityStr
 
 # ─── DEFERRED MEMBERSHIP (lead decision D-A11, Option B) ──────────────────────────────────────
 # `EvidenceType` is the closed set of evidence kinds — but its canonical 11 values are OWNED
@@ -32,7 +28,7 @@ _StrippedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_lengt
 # NAME stay unchanged (so the spec(§10) shape snapshot is stable), and `StrEnum ⊂ str` keeps every
 # prior string value valid. There is deliberately NO EvidenceType value-membership snapshot (it
 # would lock a set we are explicitly deferring — LESSON 6 corollary).
-EvidenceType = _StrippedStr
+EvidenceType = IdentityStr
 
 
 class EvidenceRef(BaseModel):
@@ -47,6 +43,6 @@ class EvidenceRef(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     type: EvidenceType
-    label: _StrippedStr
-    resource_ref: _StrippedStr | None = None
+    label: IdentityStr
+    resource_ref: IdentityStr | None = None
     confidence: float | None = Field(default=None, ge=0.0, le=1.0)

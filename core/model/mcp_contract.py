@@ -23,6 +23,7 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
 
+from _types import IdentityStr, TextStr
 from model.evidence import EvidenceRef
 from model.provenance import ProvenancePacket
 
@@ -37,10 +38,10 @@ MAX_QUERY_LEN = 4096
 # on a forgotten truncation; 8.2 owns the truncation LOGIC (what to drop) + sets `truncated`.
 MAX_RESPONSE_ITEMS = 500
 
-# LESSON 7: identity strings strip surrounding whitespace + reject empty/whitespace-only.
-# LESSON 2: project_id / graph kind are OPAQUE — carried as min-length strings, never parsed.
-_StrippedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-# §14 bound query (LESSON 10): non-empty (stripped) + capped length.
+# §14 bound query (LESSON 10): non-empty (stripped) + capped length. A specialized ingress alias
+# (kept local, not the shared IdentityStr) — Q5: purpose-built bound, not a generic identity.
+# Control-char rejection of query CONTENT is a §14-ingress concern (a later ingress-hardening pass /
+# Phase 8), not this identity-hardening pass.
 _BoundedQuery = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_QUERY_LEN)
 ]
@@ -96,7 +97,7 @@ class SearchParams(BaseModel):
     query: _BoundedQuery
     scope: RetrievalScope
     top_k: Annotated[int, Field(ge=1, le=MAX_TOP_K)] = 10
-    project_id: _StrippedStr | None = None
+    project_id: IdentityStr | None = None
 
 
 class GetFileParams(BaseModel):
@@ -105,7 +106,7 @@ class GetFileParams(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     path: _GetFilePath
-    project_id: _StrippedStr
+    project_id: IdentityStr
 
 
 class GraphParams(BaseModel):
@@ -119,8 +120,8 @@ class GraphParams(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     query: _BoundedQuery
-    kind: _StrippedStr | None = None
-    project_id: _StrippedStr
+    kind: IdentityStr | None = None
+    project_id: IdentityStr
 
 
 class ListProjectsParams(BaseModel):
@@ -134,7 +135,7 @@ class StatusParams(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    project_id: _StrippedStr | None = None
+    project_id: IdentityStr | None = None
 
 
 # ── Result half (1.5c2) — the grounded §14 response + the policy-denied marker ──────────────────
@@ -154,8 +155,8 @@ class McpResultItem(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     chip: EvidenceRef
-    file_line: _StrippedStr
-    ids: tuple[_StrippedStr, ...] = ()
+    file_line: IdentityStr
+    ids: tuple[IdentityStr, ...] = ()
 
 
 class McpResult(BaseModel):
@@ -187,7 +188,7 @@ class PolicyDenied(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     denied: Literal[True] = True
-    reason: _StrippedStr
+    reason: TextStr  # a human-readable denial message (may be multi-line) — content, not identity
 
 
 # The §14 tool-return contract: every MCP tool returns either a grounded result or a policy-denied

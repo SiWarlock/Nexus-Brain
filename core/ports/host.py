@@ -21,12 +21,11 @@ membership snapshot; Intent/Action/Result by `spec(§7)` snapshots — drift is 
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict
 
-# LESSON 7: identity/summary strings strip surrounding whitespace + reject empty / whitespace-only.
-_StrippedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+from _types import TextStr
 
 
 class HostCapability(StrEnum):
@@ -57,7 +56,7 @@ class HostIntent(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     capability: HostCapability
-    summary: _StrippedStr
+    summary: TextStr
 
 
 class HostAction(BaseModel):
@@ -71,7 +70,7 @@ class HostAction(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     capability: HostCapability
-    summary: _StrippedStr
+    summary: TextStr
     authorized: bool = False
 
 
@@ -82,7 +81,7 @@ class HostResult(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     ok: bool
-    detail: _StrippedStr | None = None
+    detail: TextStr | None = None
 
 
 @runtime_checkable

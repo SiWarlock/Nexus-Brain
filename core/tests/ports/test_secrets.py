@@ -74,3 +74,14 @@ def test_secret_ref_snapshot_and_strip() -> None:
         with pytest.raises(ValidationError):
             SecretRef(service="svc", account=badval)
     assert SecretRef(service="  svc  ", account="acct").service == "svc"
+
+
+def test_secret_ref_rejects_control_and_unicode_injection() -> None:
+    # 1.6a: ports use the shared HARDENED IdentityStr (core/_types.py) — a representative identity
+    # port field rejects ASCII control / NUL / DEL AND the unicode bidi / zero-width / BOM injection
+    # set (the old strip+min_length-only alias admitted them all). \u escapes only (Trojan-Source).
+    for bad in ("svc\x00x", "svc\x1fx", "svc\x7fx", "svc\u202ex", "svc\u200bx", "svc\ufeffx"):
+        with pytest.raises(ValidationError):
+            SecretRef(service=bad, account="acct")
+        with pytest.raises(ValidationError):
+            SecretRef(service="svc", account=bad)

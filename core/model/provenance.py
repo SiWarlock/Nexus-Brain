@@ -13,15 +13,10 @@ producer-owned (Phase-4) — bare strip+min_length strings here, like the anchor
 
 from __future__ import annotations
 
-from typing import Annotated
+from pydantic import BaseModel, ConfigDict, Field
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
-
+from _types import IdentityStr
 from model.evidence import EvidenceRef
-
-# LESSON 7: every §5/§10 identity/path/token string strips surrounding whitespace + rejects empty /
-# whitespace-only (a whitespace-loose token in a frozen cross-track contract is a Finding).
-_StrippedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class ProvenancePacket(BaseModel):
@@ -35,13 +30,13 @@ class ProvenancePacket(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    project_ids: list[_StrippedStr]
-    source_ids: list[_StrippedStr]
-    citations: list[_StrippedStr]  # file:line[-range] TOKENS; span format producer-owned (Phase-4)
-    commit_shas: list[_StrippedStr]  # the SHAs the citations are grounded at
-    session_ids: list[_StrippedStr]
-    recorded_sha: _StrippedStr | None = None  # the recorded-Citations SHA (optional)
-    index_freshness: _StrippedStr  # freshness marker; vocab owned by the Phase-4 subsystem
+    project_ids: list[IdentityStr]
+    source_ids: list[IdentityStr]
+    citations: list[IdentityStr]  # file:line[-range] TOKENS; span format producer-owned (Phase-4)
+    commit_shas: list[IdentityStr]  # the SHAs the citations are grounded at
+    session_ids: list[IdentityStr]
+    recorded_sha: IdentityStr | None = None  # the recorded-Citations SHA (optional)
+    index_freshness: IdentityStr  # freshness marker; vocab owned by the Phase-4 subsystem
     confidence: float = Field(..., ge=0.0, le=1.0)  # the answer's overall confidence
-    drift_markers: list[_StrippedStr]
+    drift_markers: list[IdentityStr]
     evidence: list[EvidenceRef]  # §10 evidence chips, composed by value (Appendix-A:217)

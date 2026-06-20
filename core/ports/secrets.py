@@ -10,12 +10,11 @@ no-plaintext-in-logs enforcement are Phase-2; this slice freezes the interface +
 
 from __future__ import annotations
 
-from typing import Annotated, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict
 
-# LESSON 7: identity strings strip surrounding whitespace + reject empty / whitespace-only.
-_StrippedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+from _types import IdentityStr
 
 
 class SecretNotFoundError(KeyError):
@@ -29,8 +28,8 @@ class SecretRef(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    service: _StrippedStr
-    account: _StrippedStr
+    service: IdentityStr
+    account: IdentityStr
 
 
 @runtime_checkable

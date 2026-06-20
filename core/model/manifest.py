@@ -18,16 +18,18 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt
 
+from _types import IdentityStr
+
 
 class ManifestArtifact(BaseModel):
     """One ingested artifact row in a manifest (immutable, closed)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    path: str = Field(min_length=1)  # repo-relative path (identity)
-    content_hash: str = Field(min_length=1)  # of the source unit (identity)
-    doc_type: str = Field(...)  # open-ended (classifier may grow)
-    producer: str = Field(...)  # open-ended (classifier may grow)
+    path: IdentityStr  # repo-relative path (identity)
+    content_hash: IdentityStr  # of the source unit (identity)
+    doc_type: IdentityStr  # open-ended (classifier may grow); empty/control rejected (1.6a)
+    producer: IdentityStr  # open-ended (classifier may grow); empty/control rejected (1.6a)
     ownership: Literal["owned", "foreign", "supplemental"] = Field(...)
 
 
@@ -47,14 +49,14 @@ class ProjectManifest(BaseModel):
     )
 
     schema_version: PositiveInt = Field(alias="schemaVersion")  # the 1.2d migrator keys on this
-    project_id: str = Field(min_length=1)
-    source_repo: str = Field(min_length=1)
-    ingested_from_sha: str = Field(min_length=1, alias="ingestedFromSha")  # derived (mirrors tag)
-    embedding_model: str = Field(min_length=1)  # reproducibility recipe (§4 inv 1)
+    project_id: IdentityStr
+    source_repo: IdentityStr
+    ingested_from_sha: IdentityStr = Field(alias="ingestedFromSha")  # derived (mirrors tag)
+    embedding_model: IdentityStr  # reproducibility recipe (§4 inv 1)
     dimension: PositiveInt = Field(...)
-    chunker_version: str = Field(min_length=1)  # reproducibility recipe (§4 inv 1)
+    chunker_version: IdentityStr  # reproducibility recipe (§4 inv 1)
     doc_format_spec_range: str = Field(...)  # free-form version range (tighten in consuming phase)
     artifacts: list[ManifestArtifact] = Field(...)  # required; [] allowed (R-PARTIAL)
     staleness_pointer: str = Field(...)  # free-form freshness ref (tighten in sync phase)
     policy_path: str = Field(...)  # path to policy.yaml (tighten in 1.5)
-    lance_version_tag: str = Field(min_length=1)  # the git-SHA LanceDB version tag (identity)
+    lance_version_tag: IdentityStr  # the git-SHA LanceDB version tag (identity)

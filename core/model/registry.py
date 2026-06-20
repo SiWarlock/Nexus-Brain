@@ -13,9 +13,9 @@ aliasing) — the on-disk JSON keys are the Python field names.
 
 from __future__ import annotations
 
-from typing import Annotated
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt, StringConstraints
+from _types import IdentityStr
 
 
 class RegistryEntry(BaseModel):
@@ -23,12 +23,12 @@ class RegistryEntry(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    db_path: str = Field(min_length=1)  # LanceDB dataset path (identity)
+    db_path: IdentityStr  # LanceDB dataset path (identity)
     schema_version: PositiveInt = Field(...)  # per-project STORE schema (mirrors the stamp)
-    model_version: str = Field(min_length=1)  # routing model identity (mirrors the stamp)
-    codegraph_db_path: str = Field(min_length=1)  # CodeGraph db path (identity)
-    last_indexed_sha: str = Field(min_length=1)  # last indexed git SHA (identity)
-    policy: str = Field(min_length=1)  # privacy marker (non-empty); fail-closed semantics in 1.5
+    model_version: IdentityStr  # routing model identity (mirrors the stamp)
+    codegraph_db_path: IdentityStr  # CodeGraph db path (identity)
+    last_indexed_sha: IdentityStr  # last indexed git SHA (identity)
+    policy: IdentityStr  # privacy marker (non-empty); fail-closed semantics in 1.5
 
 
 class Registry(BaseModel):
@@ -38,4 +38,4 @@ class Registry(BaseModel):
 
     schema_version: PositiveInt = Field(...)  # registry-FILE format version (the 1.2d migrator)
     # required, but {} is valid (a fresh machine has no projects); project_id keys are non-empty.
-    entries: dict[Annotated[str, StringConstraints(min_length=1)], RegistryEntry] = Field(...)
+    entries: dict[IdentityStr, RegistryEntry] = Field(...)

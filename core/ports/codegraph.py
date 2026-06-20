@@ -19,12 +19,11 @@ from __future__ import annotations
 
 import re
 from enum import StrEnum
-from typing import Annotated, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict
 
-# LESSON 7: symbol identity strings strip surrounding whitespace + reject empty / whitespace-only.
-_StrippedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+from _types import IdentityStr
 
 # spike §1/§5: the default per-project index directory name (NO trailing slash — forbidden-rule 5
 # bans a hardcoded path-with-slash literal; the resolver owns the name).
@@ -69,7 +68,7 @@ class CodeGraphResult(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     kind: CodeGraphQueryKind
-    symbols: tuple[_StrippedStr, ...]  # LESSON 8: a frozen-contract collection field is a tuple
+    symbols: tuple[IdentityStr, ...]  # LESSON 8: a frozen-contract collection field is a tuple
 
 
 def resolve_codegraph_dir(env_value: str | None) -> str:

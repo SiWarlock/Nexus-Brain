@@ -24,17 +24,14 @@ ids are opaque (LESSON 2), membership lands additively at first consumption.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt
+
+from _types import IdentityStr
 
 # Policy on-disk format baseline — parallels CURRENT_MANIFEST/REGISTRY_SCHEMA_VERSION (migrations.py
 # both baseline at v1). The Phase-2/3 loader keys the forward migrator off this.
 CURRENT_POLICY_SCHEMA_VERSION = 1
-
-# LESSON 7: identity/path-pattern strings strip surrounding whitespace + reject empty/whitespace.
-# LESSON 2: provider ids are OPAQUE — carried as min-length strings, never parsed for structure.
-_StrippedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class Privacy(StrEnum):
@@ -58,10 +55,10 @@ class ProviderPolicy(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    embedding: _StrippedStr | None = None
-    reranker: _StrippedStr | None = None
-    context: _StrippedStr | None = None
-    model: _StrippedStr | None = None
+    embedding: IdentityStr | None = None
+    reranker: IdentityStr | None = None
+    context: IdentityStr | None = None
+    model: IdentityStr | None = None
 
 
 class McpPolicy(BaseModel):
@@ -108,4 +105,4 @@ class ProjectPolicy(BaseModel):
     mcp: McpPolicy = Field(default_factory=McpPolicy)
     federation: FederationPolicy = Field(default_factory=FederationPolicy)
     sessions: SessionPolicy = Field(default_factory=SessionPolicy)
-    brainignore: tuple[_StrippedStr, ...] = ()
+    brainignore: tuple[IdentityStr, ...] = ()
