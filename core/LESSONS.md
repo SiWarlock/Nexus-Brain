@@ -169,3 +169,85 @@ This has now recurred twice on load-bearing contracts: `SecretRef{service, accou
 The pattern generalizes to any "must-not-carry" invariant: a privacy field, a second source-of-truth, a capability that must come from elsewhere. Don't rely on "we just won't set it" — omit it AND `extra="forbid"` AND pin a reject/no-leak test, so the absence is enforced for every caller and every later edit.
 
 **Rule:** For a contract that must not carry sensitive/divergent data, omit the field, set `extra="forbid"`, and pin a reject-the-kwarg (+ no-leak, if sensitive) test — mechanical exclusion, never a documented convention.
+
+---
+
+## <a id="12"></a>12. Freeze the boundary INTERFACE, not the engine's quality envelope — don't bake a recall/quality claim into the iface or its `Fake*`
+
+**Date:** 2026-06-18.
+**Source slice:** 1.5a (`redactor_interface_freeze`).
+
+Phase 1 freezes a `Redactor` whose *engine* doesn't land until Phase 2.3. The temptation is to encode the engine's acceptance target — the catchable-set recall floor (≥95%) + FP ceiling (≤5%) — into the Phase-1 artifact. Resist it. The interface freezes three things and only three: the **signature** (`redact(payload: str, sink: Sink) -> str`), the **closed alphabet** (`Sink` StrEnum `{persist, mcp_egress, cloud_egress}`, membership-snapshot pinned — the §2.5-seam `spec(§18)` pin), and the **behavioral invariants that hold regardless of detection quality** (idempotent so the redaction marker doesn't re-redact, never-raises so a boundary callable can't DoS ingest/egress, git-SHA passthrough as a zero-tolerance sub-invariant since redacting a SHA breaks the LanceDB version tag + `last_resolved_sha`/§18·D-14, pure/in-memory). The **recall/FP envelope is documented** (the docstring names the single-source-of-truth constants in `ci/eval/redaction_fuzz/harness.py`) but **enforced where the engine lands** — the Phase-2.3 CI fuzz gate, not a Phase-1 assert.
+
+Two corollaries. (1) **The interface references its envelope's single source, it doesn't import it** — `core/` must not depend on `ci/` (import-direction law; `ci/` is outside core's import root anyway, so an accidental import fails at collection/mypy). A docstring reference keeps the number discoverable without coupling the layers. (2) **The `Fake*` double must make NO quality claim.** A `FakeRedactor` is a contract-faithful test double — it honors the behavioral invariants (so downstream tests that inject it exercise the real contract) and is observably non-identity (it strips a couple of obvious prefix tokens so a "was the redactor applied?" test has signal), but it explicitly does **not** meet the recall envelope and its docstring says so. A Fake that silently claimed engine-grade redaction would let a test pass while the real catchable-set engine is still unbuilt — the fidelity trap of LESSON 1, applied to a quality envelope instead of a behavioral contract.
+
+This generalizes to every boundary/safety interface frozen ahead of its engine (the 1.5 MCP contract's ingress validation vs. the Phase-8 boundary; any port whose adapter is eval-tested): freeze the shape + the invariants that are true by construction; defer the quality bar to the layer that can actually measure it; never let the interface or its double over-promise.
+
+**Rule:** A safety/boundary interface freezes signature + closed alphabet + by-construction behavioral invariants now; the engine and its recall/quality envelope are enforced where the engine lands — reference the envelope's single-source constants, never import or assert them in the interface, and never bake a quality claim into the `Fake*` double.
+
+---
+
+## <a id="13"></a>13. Fail-CLOSED config: restrictive defaults + parse-don't-trust at the frozen schema; the fail-SOFT fallback is the loader's
+
+**Date:** 2026-06-18.
+**Source slice:** 1.5b (`policy_yaml_schema`).
+
+A privacy/safety config (`policy.yaml`, §16) must **fail closed**: absent, empty, or unreadable input must land the system in its *most-restrictive* posture, never an open one. The freeze split this across two layers, and the split is the lesson. The **frozen schema** (`ProjectPolicy`) owns two of the three fail-closed obligations: (1) every field **defaults to most-restrictive** — `privacy=local`, every opt-in bool (`mcp.expose`/`federation.visible`/`sessions.consent`) `False`, `brainignore=()`, provider ids `None` — so a `{}` policy parses straight to lockdown; and (2) **parse-don't-trust reject** (§4) — an unrecognized/empty/wrong-case `privacy`, or any unknown key (`extra="forbid"` at all five model levels), raises `ValidationError` rather than silently coercing toward open. The third obligation — **fail-SOFT recovery**, i.e. "a *malformed* policy file is treated as most-restrictive instead of crashing the process" — is deliberately **NOT** the schema's job; it belongs to the Phase-2/3 **loader** (the startup-reconcile path), which catches the `ValidationError` and substitutes the lockdown default. A frozen schema that swallowed bad input and returned defaults would *hide* corruption (a user's intended `cloud` silently becoming `local`, or a typo'd opt-in silently dropped) — the schema must be a strict parser; leniency lives one layer up, in the loader, where it is a deliberate recovery, not an accident.
+
+The test consequence: pin BOTH directions. Fail-closed defaults are pinned by constructing `ProjectPolicy()` *and* `model_validate({})` (the empty-dict path is what the loader actually hits). But defaults alone are a trap — a buggy schema that *ignored all input and always returned defaults* passes every fail-closed + snapshot test. So also pin a **positive value-preservation test**: a non-default policy (`privacy=cloud`, opt-ins `True`, a `brainignore` entry, a provider id) round-trips through `model_dump`/`model_validate` (and the JSON serializer path) with every value intact. The OFF-state pin and the ON-state pin together prove the schema both locks down by default *and* honors explicit choices — neither alone is sufficient.
+
+**Rule:** A fail-CLOSED config freezes most-restrictive defaults + parse-don't-trust reject (`extra="forbid"`, no silent coercion) at the schema; the fail-SOFT "malformed → most-restrictive" recovery is the loader's, not the schema's. Pin both the default-lockdown (`{}` parse) AND a positive value-preservation round-trip, so an always-return-defaults bug can't pass.
+
+---
+
+## <a id="14"></a>14. Ingress validation layers: freeze the input-SHAPE allow-list at the contract; runtime containment/authorization is the boundary phase's
+
+**Date:** 2026-06-18.
+**Source slice:** 1.5c1 (`mcp_contract_ingress`).
+
+The §14 MCP `get_file` path is untrusted input from an external caller, and its validation splits across two layers — the split is the lesson, and it's the **third instance of a recurring freeze-discipline pattern** (cf. LESSON 12 interface-vs-engine, LESSON 13 schema-vs-loader): the **frozen Phase-1 contract** pins the static, by-construction guarantee; the **runtime, stateful enforcement** belongs to the consuming phase. For an ingress path the contract layer is a **positive charset allow-list on the path SHAPE** (`re.fullmatch(r"[A-Za-z0-9._/-]+")` + reject leading `/`, any `..` segment, empty/whitespace — LESSON 10, default-deny, bypass-corpus-pinned). The contract layer deliberately does NOT — and cannot — do **containment**: "is this path inside the resolved project root?" needs the real root resolved at runtime (Phase 8.2), which canonicalizes the realpath and re-checks containment THERE. Critically, the shape layer accepts non-canonical-but-charset-valid forms (`a//b`, `a/./b`, `a/`, `.`) and dotfile paths (`.git/config`) — these are not traversal, and `.github/` is legitimately indexed (§8 discovery) — so the runtime containment MUST operate on the **resolved realpath** (collapsing `.`/`//`, resolving symlinks) before serving, with the redactor on egress regardless.
+
+Two corollaries reinforced here. (1) **Strictest allow-list at a frozen boundary, widen additively.** ASCII-only was chosen over a unicode-aware `\w` allow-list because it eliminates the entire unicode-normalization/homoglyph/bidi residual class at once, and because loosening a frozen allow-list later is additive/safe while tightening it is breaking — so the reversible direction is freeze-tight, widen (with NFC-normalize) only when a real need appears. (2) **An ingress param REJECTS; a resolver FALLS BACK.** `get_file`'s validator raises `ValidationError` on a bad path (parse-don't-trust at the boundary), unlike 1.4c's `resolve_codegraph_dir` which defaults to `.codegraph` — a resolver supplies a value, an ingress param gates untrusted input, and silently defaulting untrusted input would mask an attack.
+
+**Rule:** Split ingress validation — freeze the input-SHAPE positive allow-list (strictest/ASCII, bypass-corpus-pinned, widen-additively) at the Phase-1 contract; defer canonicalize-against-the-resolved-root CONTAINMENT + authorization + egress redaction to the boundary phase, and run containment on the resolved realpath (the shape layer admits non-canonical + dotfile forms by design). An ingress param raises; a resolver falls back.
+
+---
+
+## <a id="15"></a>15. A policy/authz denial is a typed returned MARKER, not a raised exception — discriminated + extra-forbid on both arms
+
+**Date:** 2026-06-18.
+**Source slice:** 1.5c2 (`mcp_contract_results`).
+
+§14 mandates "policy-denied → marker-not-error": when the MCP boundary denies a tool call (an unauthorized project, a policy block), the tool returns a denial VALUE, never raises. A denial is an *outcome*, not a *failure* — raising would surface to the caller as a tool error indistinguishable from a crash/bug, losing the "you asked for something policy forbids" signal and inviting retry/alarm. So the frozen contract types the tool return as a discriminated union `McpToolResult = McpResult | PolicyDenied`, where `PolicyDenied{denied: Literal[True], reason}` is an ordinary frozen model the handler constructs and returns.
+
+Two techniques make the union safe, both pinned. (1) **A `Literal[True]` discriminator** — `denied` can only be `True`, so a `PolicyDenied` can never masquerade as a non-denial (`False`/`None`/`0`/`""` rejected at parse). (2) **`extra="forbid"` on BOTH union arms** — so neither arm can smuggle the other's keys (a `McpResult` can't carry a stray `denied`; a `PolicyDenied` can't carry `items`/`provenance`), keeping the union unambiguous to a structural matcher. Pin the union itself with `typing.get_args(McpToolResult) == (McpResult, PolicyDenied)` so a future arm add/remove is a visible, test-breaking change. (Note: `denied=1` lax-coerces to `True` — harmless here because it only ever *strengthens* a denial; the boundary phase constructs `PolicyDenied` directly. A non-strengthening boolean would want `StrictBool` — see the safety-opt-in-bool sweep.)
+
+**Rule:** Model a policy/authz denial as a typed returned marker in a discriminated union (`Result | Denied`), never a raised exception — give the marker a `Literal`-pinned discriminator, set `extra="forbid"` on both arms so neither smuggles the other's keys, and pin the union via `get_args`.
+
+---
+
+## <a id="16"></a>16. Shared cross-cutting types live in `core/_types.py`; identity vs content get distinct hardened aliases; freeze the char-policy tight before fork
+
+**Date:** 2026-06-20.
+**Source slice:** 1.6a (`identity_alias_consolidation_and_hardening`).
+
+Eleven modules across `model/` and `ports/` had each re-declared the same `_StrippedStr`/`IdentityStr` alias — a maintenance hazard + an inconsistent hardening surface. The consolidation home is **`core/_types.py`**, a cross-cutting foundational module both `model/` and `ports/` import. It can NOT be `core/model/_types.py`: `ports/` is a §2.5 sibling of `model/`, so a `ports`→`model` import is a forbidden cross-sibling edge. A genuinely cross-cutting type module (imported from anywhere, depending on nothing) is the right placement — the §2.5 DAG's "cross-cutting layers can be imported from anywhere" clause.
+
+Two aliases, not one, because identity and content have different threat models. **`IdentityStr`** (ids, paths, SHAs, tokens, markers, dict keys, symbols): strip + min_length + a TIGHT `max_length` (1024) + reject the full Unicode control/format/bidi/zero-width/separator set (categories `Cc`/`Cf`/`Zl`/`Zp` — bidi-overrides U+202A–E, zero-width U+200B–D, BOM U+FEFF, NEL U+0085, C1, line/para separators) while still ALLOWING legitimate unicode letters/digits (so a unicode source path like `日本語.py` validates). **`TextStr`** (human prose / model output / cited spans — `chunk.text`, `cited_text`, `GenerateResult.text`, plus message fields `PolicyDenied.reason`, `host.summary/detail`): strip + min_length + a LARGER cap (8192) + reject NUL/C0/C1 except `\t\n\r`, but KEEP legitimate multilingual format chars. The classification rule: *reference/identifier/path/marker → `IdentityStr`; human-readable prose/message → `TextStr`; explicitly-documented-loose or plain-value fields (e.g. an `ObsEvent` attribute value) → leave.*
+
+The load-bearing call was the char-policy on the FROZEN cross-track identity fields. Rejecting the invisible/bidi/control Unicode classes on identities is a clear-cut, low-risk hardening (no legitimate id/path/SHA contains them), and the **before-fork window is the only cheap time to draw the line** — tightening a frozen cross-track contract after the fork is breaking. So freeze tight now, widen additively later if a real need appears (LESSON 14's freeze-tight-widen-additively, applied to the char set). This was owner-confirmed (the load-bearing-cross-track-contract + security-finding class the owner reserves). The mirror-image decision: the analogous CONTENT sanitization — bidi-overrides in `chunk.text`, which is *source code* (the Trojan-Source attack) — is deliberately NOT a frozen-contract hard-reject (that would refuse legitimate multilingual content); it belongs at the Phase-2 ingest/redactor as a flag/strip (LESSON 14: shape/by-construction at the contract, content sanitization at the consuming phase).
+
+**Rule:** Hoist a shared field-constraint type to a cross-cutting `core/_types.py` (never a sibling package's `_types`, which forces a cross-sibling import); split identity (`IdentityStr` — tight cap + reject all control/format/bidi/zero-width unicode, allow letters) from content (`TextStr` — larger cap, keep multilingual); freeze the identity char-policy tight before the fork (post-fork tightening is breaking), and defer content/bidi (Trojan-Source) sanitization to the consuming phase.
+
+---
+
+## <a id="17"></a>17. Security/safety/lifecycle/output booleans use `StrictBool`, not `bool` — parse-don't-trust on booleans
+
+**Date:** 2026-06-20.
+**Source slice:** 1.6c (`strictbool_safety_bools`).
+
+Pydantic's default `bool` is LAX: it coerces `1`/`0`/`"yes"`/`"true"`/`"on"`/`"1"` into `True`/`False`. On a field that gates **exposure, consent, authorization, lifecycle, or a system output**, that lax coercion is a parse-don't-trust hole — a malformed or attacker-influenced `"yes"`/`1` silently becomes `True` on a security-relevant flag. The 1.5b security-reviewer first flagged it on `policy.{mcp.expose, federation.visible, sessions.consent}`; the fix (owner-approved) generalizes to a uniform rule: **every frozen-contract boolean is `StrictBool`** (rejects the lax forms, accepts only a real `bool`), with ONE exemption — a **deny-strengthening `Literal[True]` marker** (`PolicyDenied.denied`), where a lax `1`→`True` only ever produces a denial and so can't weaken the gate.
+
+The converted set (7) spanned the gate bools (policy opt-ins), the **security stamp** (`HostAction.authorized` — defense-in-depth atop the `perform` capability re-check, LESSON 9: a lax-coerced `authorized="1"` is now rejected at parse), the **lifecycle** flag (`Chunk.tombstone`), and the **system-output** flags (`HostResult.ok`, `McpResult.truncated`). The last two were included for a *uniform* rule rather than a per-field judgment, because "is this bool security-relevant enough?" is a fragile line and the cost of `StrictBool` everywhere is ~zero (every internal producer sets a real `bool`, so nothing legitimate is rejected). `StrictBool` is wire-identical to `bool` (a JSON boolean), so all schema/JSON snapshots stay green — it's a pure parse-tightening. The before-fork window is the time to draw it: a frozen cross-track bool tightened post-fork is breaking.
+
+**Rule:** A frozen-contract boolean is `StrictBool` (reject lax `1`/`"yes"`/`"on"` coercion — parse-don't-trust), not bare `bool`; the only exemption is a deny-strengthening `Literal[True]` marker. Draw it before the fork (post-fork tightening is breaking); it's wire-identical so snapshots stay green.

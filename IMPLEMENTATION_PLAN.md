@@ -16,9 +16,11 @@
 
 ## Currently in progress
 
-**Bootstrap session.** Planning chain complete (arch-draft → arch-finalize → tasks-gen). Scaffolding not yet generated; first `/tdd` slice not started.
+> **NOTE — canonical living-state is the integration `main` (root) copy of this file.** This worktree copy carries the frozen task headings (used by `scripts/spec-lint.sh`) but its ticks/descriptions lag; read the **root/main** `IMPLEMENTATION_PLAN.md` "Currently in progress" + the handoff `docs/sessions/contract-006-2026-06-20-*.md` for the true state.
 
-**Next session target:** `/scaffold-generate`, then Phase 0 (spikes) → Phase 1.1 (Clock/Seed/IdGen + port interfaces).
+**Track `contract`, Phase 1 — at the fork-gate doorstep.** Phase 1.1–1.4 ✓ (prior rounds) · **1.5 boundary contracts ✓** (Redactor/policy/MCP — `343b6fb`/`a9df580`/`e65b9e3`/`959d5d9`) · **1.6 before-fork hardening sweep ✓** (identity consolidation+unicode-hardening `0520304` · list→tuple `ec71d48` · StrictBool `de63ead`). Suite **232/232**, mypy --strict + ruff + format clean. LESSONS §1–§17 banked. **Cycled at end-of-1.6** (context WARN). Handoff: `docs/sessions/contract-006-2026-06-20-phase1.5-1.6-orchestrator-handoff.md` (read FIRST) + decision log `docs/lead-decisions-while-away.md` (D-A1–A16) + impl doc `contract-005-*`.
+
+**Next session target:** Phase-0 spikes **0.3** (O-FED) + **0.4** (O-LANCE-BAKEOFF) → **`/phase-exit 1`** (arch-drift audit + spec-coverage + D-A13/D-A14 fork-obligation handoff) → **merge `track/contract` → `main` = the fork gate**. (0.5 notarization HITL-deferred, D-A2.)
 
 ---
 
@@ -209,6 +211,12 @@ Executed row-by-row by `/phase-exit <phase>`:
 ### 1.5 — Boundary contracts: MCP tool contract · `policy.yaml` · `Redactor` interface
 - [ ] Frozen MCP tool signatures (params incl. scope enum + project-id + top-k; result = chip+file:line+ids+provenance; streaming; policy-denied marker; **ingress validation** rules) · `policy.yaml` schema (providers/privacy `local|cloud`/boundary-filter/consent) · `Redactor` interface (`redact(payload, sink∈{persist,mcp_egress,cloud_egress})`).
 - [ ] Files: `core/model/{mcp_contract,policy,redactor_iface}.py` (NEW). Cross-doc invariant: NEW (MCP contract, policy.yaml, Redactor — §14/§16/§18; **§2.5-seam → schema-snapshot test `spec(§14)`/`spec(§18)`**). Depends on: 1.1.
+
+### 1.6 — Before-fork hardening sweep (LESSON 7/8 + StrictBool; implements §4/§5/§7; origin: 1.2c1/1.3/1.4/1.5 carry-forward)
+- [ ] **(1.6a) Shared hardened identity alias.** Consolidate the 11 duplicated `_StrippedStr`/`IdentityStr` defs (model: anchor/evidence/provenance/policy/mcp_contract; ports: codegraph/host/events/observability/secrets/providers) into ONE cross-cutting `core/_types.py` `IdentityStr` (strip + min_length + **control-char/NUL rejection + max_length cap**); retrofit all identity fields incl. the §5 whitespace-strip gap (stamp/manifest/registry use bare `Field(min_length=1)` — no strip). Content fields (`providers.cited_text`/`text`) get a separate looser treatment (not the tight identity cap). _(LESSON 7; DAG: `core/_types.py` cross-cutting — NOT `model/_types.py`, which would force a forbidden `ports`→`model` import.)_
+- [ ] **(1.6b) `list`→`tuple` for frozen-contract collections.** `ProvenancePacket` collections (project_ids/source_ids/citations/commit_shas/session_ids/drift_markers/**evidence**) + check `GenerateResult.citations` → `tuple[...]` so `frozen=True` is deeply immutable (a composed `McpResult.provenance.evidence` currently still `.append`s). _(LESSON 8; 1.4/1.5 already use tuple.)_
+- [ ] **(1.6c) `StrictBool` for safety opt-in bools.** `policy.{mcp.expose, federation.visible, sessions.consent}` + the sibling `host.py`/`chunk.py` bools → `StrictBool` (reject lax `"yes"`/`1`/`"on"` coercion; parse-don't-trust). Uniform one-pass. _(OWNER-APPROVED 2026-06-18 via lead. `PolicyDenied.denied=Literal[True]` is deny-strengthening — leave it.)_
+- [ ] Files: `core/_types.py` (NEW) + retrofits across `core/model/*` + `core/ports/*`. Cross-doc invariant: constraint-tightening on frozen contracts (additive — no field-name/shape change; schema-snapshots stay green). Depends on: 1.2/1.3/1.4/1.5.
 
 ### Acceptance criteria (1)
 - [ ] All Appendix-A freeze-before-fork models exist + have schema-snapshot tests; all 11 ports have interfaces + Fake doubles; `/preflight` clean. **This is the fork gate.**
