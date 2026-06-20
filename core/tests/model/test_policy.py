@@ -196,3 +196,15 @@ def test_explicit_values_preserved() -> None:
     # JSON-string round-trip — the real on-disk persistence path; exercises the serializer the dict
     # path skips (e.g. brainignore tuple → JSON array → tuple coercion), mirroring test_manifest.
     assert ProjectPolicy.model_validate_json(p.model_dump_json()) == p
+
+
+def test_policy_bools_strict() -> None:
+    # §16 + §4 (1.6c, owner-approved): the opt-in bools are StrictBool — a lax 1/"yes"/"true"/"on"
+    # can't coerce to True (parse-don't-trust on a privacy/egress/consent gate); a real bool is ok.
+    cases = ((McpPolicy, "expose"), (FederationPolicy, "visible"), (SessionPolicy, "consent"))
+    for model, field in cases:
+        for lax in (1, 0, "yes", "true", "on", "false"):
+            with pytest.raises(ValidationError):
+                model.model_validate({field: lax})
+        assert getattr(model.model_validate({field: True}), field) is True
+        assert getattr(model(), field) is False  # default stays False (fail-closed)

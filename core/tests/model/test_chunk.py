@@ -191,3 +191,16 @@ def test_chunk_content_fields_use_textstr() -> None:
             kwargs[field] = bad
             with pytest.raises(ValidationError):
                 Chunk(**kwargs)
+
+
+def test_chunk_tombstone_strict() -> None:
+    # §5 lifecycle (1.6c): tombstone is StrictBool — a lax 1/"yes"/"true"/"on" can't coerce to True
+    # (parse-don't-trust on the persisted lifecycle flag); a real bool is accepted.
+    for lax in (1, 0, "yes", "true", "on", "false"):
+        kwargs = _valid_kwargs()
+        kwargs["tombstone"] = lax
+        with pytest.raises(ValidationError):
+            Chunk(**kwargs)
+    kwargs = _valid_kwargs()
+    kwargs["tombstone"] = True
+    assert Chunk(**kwargs).tombstone is True

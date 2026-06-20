@@ -21,7 +21,7 @@ import re
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool, StringConstraints
 
 from _types import IdentityStr, TextStr
 from model.evidence import EvidenceRef
@@ -174,7 +174,7 @@ class McpResult(BaseModel):
 
     items: Annotated[tuple[McpResultItem, ...], Field(max_length=MAX_RESPONSE_ITEMS)]
     provenance: ProvenancePacket
-    truncated: bool = False
+    truncated: StrictBool = False
 
 
 class PolicyDenied(BaseModel):

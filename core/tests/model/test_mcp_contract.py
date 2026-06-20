@@ -310,3 +310,12 @@ def test_composed_mcpresult_provenance_immutable() -> None:
     assert isinstance(r.provenance.evidence, tuple)
     with pytest.raises(AttributeError):
         r.provenance.evidence.append(object())  # type: ignore[attr-defined]  # tuple has no .append
+
+
+def test_mcp_truncated_strict() -> None:
+    # §14 (1.6c, Q1 uniformity): truncated is StrictBool — a lax 1/"yes"/"true"/"on" can't coerce to
+    # True; a real bool is accepted. A system-set output flag, hardened uniformly (like host.ok).
+    for lax in (1, 0, "yes", "true", "on", "false"):
+        with pytest.raises(ValidationError):
+            McpResult.model_validate({**_result_kwargs(), "truncated": lax})
+    assert McpResult.model_validate({**_result_kwargs(), "truncated": True}).truncated is True

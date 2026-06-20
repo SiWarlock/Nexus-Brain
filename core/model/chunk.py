@@ -12,7 +12,7 @@ from __future__ import annotations
 import warnings
 from typing import Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictBool
 
 from _types import IdentityStr, TextStr
 
@@ -55,5 +55,5 @@ with warnings.catch_warnings():
         embedding_model_version: IdentityStr
         context_blurb: TextStr | None = None  # Contextual-Retrieval prefix (code chunks); optional
         generation: int
-        tombstone: bool
+        tombstone: StrictBool
         created_at: AwareDatetime

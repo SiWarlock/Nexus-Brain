@@ -23,7 +23,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, StrictBool
 
 from _types import TextStr
 
@@ -71,7 +71,7 @@ class HostAction(BaseModel):
 
     capability: HostCapability
     summary: TextStr
-    authorized: bool = False
+    authorized: StrictBool = False
 
 
 class HostResult(BaseModel):
@@ -80,7 +80,7 @@ class HostResult(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    ok: bool
+    ok: StrictBool
     detail: TextStr | None = None
 
 

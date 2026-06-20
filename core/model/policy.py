@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, StrictBool
 
 from _types import IdentityStr
 
@@ -69,7 +69,7 @@ class McpPolicy(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    expose: bool = False
+    expose: StrictBool = False
 
 
 class FederationPolicy(BaseModel):
@@ -77,7 +77,7 @@ class FederationPolicy(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    visible: bool = False
+    visible: StrictBool = False
 
 
 class SessionPolicy(BaseModel):
@@ -85,7 +85,7 @@ class SessionPolicy(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    consent: bool = False
+    consent: StrictBool = False
 
 
 class ProjectPolicy(BaseModel):

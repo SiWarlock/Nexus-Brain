@@ -280,3 +280,25 @@ def test_inv_allowlist_no_mutation_outside_hostport() -> None:
                 continue
             violations.extend(_scan_file_for_mutations(path, str(path.relative_to(_CORE_ROOT))))
     assert violations == [], f"FS/git mutation outside HostPort.perform: {violations}"
+
+
+def test_host_authorized_strict() -> None:
+    # §7 capability stamp (LESSON 9 defense-in-depth, 1.6c): authorized is StrictBool — a lax
+    # authorized=1/"true" is rejected at parse, ON TOP of perform's capability re-validation.
+    base = {"capability": "own_store_write", "summary": "write the store"}
+    for lax in (1, 0, "yes", "true", "on", "false"):
+        with pytest.raises(ValidationError):
+            HostAction.model_validate({**base, "authorized": lax})
+    assert HostAction.model_validate({**base, "authorized": True}).authorized is True
+    # the stamp defaults fail-closed False (a hand-built action is not authorized)
+    assert HostAction(capability=HostCapability.OWN_STORE_WRITE, summary="s").authorized is False
+
+
+def test_host_result_ok_strict() -> None:
+    # §7 (1.6c uniformity): HostResult.ok is StrictBool — a lax 1/"yes"/"true"/"on" can't coerce to
+    # True; a real bool is accepted. The system-set perform() outcome flag, hardened uniformly.
+    for lax in (1, 0, "yes", "true", "on", "false"):
+        with pytest.raises(ValidationError):
+            HostResult.model_validate({"ok": lax})
+    assert HostResult.model_validate({"ok": True}).ok is True
+    assert HostResult.model_validate({"ok": False}).ok is False
