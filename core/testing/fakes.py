@@ -176,7 +176,7 @@ class FakeModelProvider:
         self._citations = list(default if citations is None else citations)
 
     def generate(self, prompt: str) -> GenerateResult:
-        return GenerateResult(text=self._text, citations=list(self._citations))
+        return GenerateResult(text=self._text, citations=tuple(self._citations))
 
 
 class FakeCodeGraph:

@@ -99,14 +99,14 @@ def test_context_strategy_contract() -> None:
 
 
 def test_model_provider_contract() -> None:
-    # spec(§7/§10): generate → GenerateResult{text, citations}; citations is a list[Citation] (≥0).
+    # spec(§7/§10): generate → GenerateResult{text, citations}; citations is a tuple[Citation] (≥0).
     mp = FakeModelProvider()
     result = mp.generate("a prompt")
     assert isinstance(result, GenerateResult)
     assert isinstance(result.text, str) and result.text != ""
-    assert isinstance(result.citations, list)
+    assert isinstance(result.citations, tuple)
     assert all(isinstance(c, Citation) for c in result.citations)
-    assert FakeModelProvider(citations=[]).generate("p").citations == []
+    assert FakeModelProvider(citations=[]).generate("p").citations == ()
     # nested Citation is frozen too — deep immutability (ProvenancePacket-consistent, LESSON 8).
     gr = FakeModelProvider(citations=[Citation(cited_text="c", source_index=0)]).generate("p")
     with pytest.raises(ValidationError):
@@ -123,9 +123,21 @@ def test_generate_result_and_citation_snapshot() -> None:
         GenerateResult(**bad_gen)
     with pytest.raises(ValidationError):
         Citation(**bad_cit)
-    g = GenerateResult(text="x", citations=[])
+    g = GenerateResult(text="x", citations=())
     with pytest.raises(ValidationError):
         g.text = "y"
+
+
+def test_generate_result_citations_tuple() -> None:
+    # LESSON 8 (1.6b): GenerateResult.citations is an immutable tuple[Citation, ...] — a list input
+    # coerces; .append() raises (consistent with ProvenancePacket's collections).
+    cite = Citation(cited_text="c", source_index=0)
+    g = GenerateResult.model_validate({"text": "ans", "citations": [cite]})  # list coerces
+    assert isinstance(g.citations, tuple)
+    assert isinstance(g.citations[0], Citation)
+    with pytest.raises(AttributeError):
+        g.citations.append(g.citations[0])  # type: ignore[attr-defined]  # tuple has no .append
+    assert GenerateResult.model_validate({"text": "x", "citations": []}).citations == ()
 
 
 def test_fakes_fidelity() -> None:
@@ -170,8 +182,8 @@ def test_provider_result_strip_identity() -> None:
     # empty/whitespace.
     for bad in ("", "   "):
         with pytest.raises(ValidationError):
-            GenerateResult(text=bad, citations=[])
+            GenerateResult(text=bad, citations=())
         with pytest.raises(ValidationError):
             Citation(cited_text=bad, source_index=0)
-    assert GenerateResult(text="  hi  ", citations=[]).text == "hi"
+    assert GenerateResult(text="  hi  ", citations=()).text == "hi"
     assert Citation(cited_text="  c  ", source_index=0).cited_text == "c"

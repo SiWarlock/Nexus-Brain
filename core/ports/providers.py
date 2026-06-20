@@ -58,7 +58,7 @@ class GenerateResult(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     text: TextStr
-    citations: list[Citation]
+    citations: tuple[Citation, ...]  # LESSON 8: a frozen-contract collection is a tuple (immutable)
 
 
 @runtime_checkable

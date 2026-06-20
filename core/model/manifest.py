@@ -56,7 +56,7 @@ class ProjectManifest(BaseModel):
     dimension: PositiveInt = Field(...)
     chunker_version: IdentityStr  # reproducibility recipe (§4 inv 1)
     doc_format_spec_range: str = Field(...)  # free-form version range (tighten in consuming phase)
-    artifacts: list[ManifestArtifact] = Field(...)  # required; [] allowed (R-PARTIAL)
+    artifacts: tuple[ManifestArtifact, ...] = Field(...)  # required; () ok (R-PARTIAL, LESSON 8)
     staleness_pointer: str = Field(...)  # free-form freshness ref (tighten in sync phase)
     policy_path: str = Field(...)  # path to policy.yaml (tighten in 1.5)
     lance_version_tag: IdentityStr  # the git-SHA LanceDB version tag (identity)

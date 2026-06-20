@@ -189,11 +189,21 @@ def test_artifact_identity_min_length() -> None:
 
 
 def test_manifest_accepts_empty_artifacts() -> None:
-    # spec(§5): R-PARTIAL — a doc-less repo has zero artifacts; artifacts=[] is valid.
+    # spec(§5): R-PARTIAL — a doc-less repo has zero artifacts; [] coerces to () (valid).
     kwargs = _valid_manifest_kwargs()
     kwargs["artifacts"] = []
     m = ProjectManifest(**kwargs)
-    assert m.artifacts == []
+    assert m.artifacts == ()
+
+
+def test_manifest_artifacts_tuple() -> None:
+    # LESSON 8 (1.6b): artifacts is an immutable tuple — a list input coerces; .append() raises
+    # (a "frozen" manifest's artifact list can't be mutated in place).
+    m = ProjectManifest(**_valid_manifest_kwargs())  # _valid passes a list -> must coerce to tuple
+    assert isinstance(m.artifacts, tuple)
+    assert isinstance(m.artifacts[0], ManifestArtifact)
+    with pytest.raises(AttributeError):
+        m.artifacts.append(m.artifacts[0])  # type: ignore[attr-defined]  # tuple has no .append
 
 
 def test_artifact_ownership_closed_set() -> None:

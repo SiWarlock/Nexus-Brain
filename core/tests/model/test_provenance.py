@@ -77,13 +77,13 @@ def test_provenance_schema_snapshot() -> None:
 def test_provenance_valid_construction_full() -> None:
     # spec(§10): the happy path — all 10 fields (incl. a nested EvidenceRef) round-read.
     p = ProvenancePacket(**_valid_kwargs())
-    assert p.project_ids == ["proj_nexus"]
-    assert p.citations == ["core/model/anchor.py:20-35"]
-    assert p.commit_shas == ["sha256:deadbeef"]
+    assert p.project_ids == ("proj_nexus",)
+    assert p.citations == ("core/model/anchor.py:20-35",)
+    assert p.commit_shas == ("sha256:deadbeef",)
     assert p.recorded_sha == "sha256:cafef00d"
     assert p.index_freshness == "fresh"
     assert p.confidence == 0.91
-    assert p.drift_markers == ["none"]
+    assert p.drift_markers == ("none",)
     assert len(p.evidence) == 1
     assert p.evidence[0].type == "code_chunk"
 
@@ -114,8 +114,9 @@ def test_provenance_empty_lists_allowed() -> None:
     for field in (*STRING_LIST_FIELDS, "evidence"):
         kwargs[field] = []
     p = ProvenancePacket(**kwargs)
-    assert p.citations == []
-    assert p.evidence == []
+    assert p.project_ids == ()
+    assert p.citations == ()
+    assert p.evidence == ()
 
 
 def test_provenance_rejects_empty_string_elements() -> None:
@@ -140,7 +141,7 @@ def test_provenance_strips_whitespace() -> None:
     kwargs["citations"] = ["  core/x.py:1  "]
     kwargs["index_freshness"] = "  fresh  "
     p = ProvenancePacket(**kwargs)
-    assert p.citations == ["core/x.py:1"]
+    assert p.citations == ("core/x.py:1",)
     assert p.index_freshness == "fresh"
 
 
@@ -173,14 +174,14 @@ def test_provenance_recorded_sha_optional() -> None:
 
 
 def test_provenance_evidence_typed() -> None:
-    # spec(§10): evidence is list[EvidenceRef] (Q1 additive composition) — instances accepted,
+    # spec(§10): evidence is tuple[EvidenceRef, ...] (Q1 additive composition) — instances accepted,
     # empty allowed, a non-EvidenceRef/malformed element rejected (parse-don't-trust on the nested).
     p = ProvenancePacket(**_valid_kwargs())
     assert isinstance(p.evidence[0], EvidenceRef)
 
     empty = _valid_kwargs()
     empty["evidence"] = []
-    assert ProvenancePacket(**empty).evidence == []
+    assert ProvenancePacket(**empty).evidence == ()
 
     # a well-formed dict COERCES to a validated EvidenceRef (the JSON/MCP-egress path) — accepted
     # because it still passes EvidenceRef's full validation; parse-don't-trust holds.
@@ -223,3 +224,20 @@ def test_provenance_json_roundtrip() -> None:
     assert dumped["recorded_sha"] is None
     assert dumped["evidence"][0]["type"] == "code_chunk"
     assert ProvenancePacket.model_validate_json(p.model_dump_json()) == p
+
+
+def test_provenance_collections_are_tuples() -> None:
+    # LESSON 8 (1.6b): every collection field is an immutable tuple — a list input coerces to tuple
+    # (frozen=True does NOT deep-freeze a list; only a tuple container is deeply immutable).
+    p = ProvenancePacket(**_valid_kwargs())  # _valid_kwargs passes lists -> must coerce to tuples
+    for field in (*STRING_LIST_FIELDS, "evidence"):
+        assert isinstance(getattr(p, field), tuple)
+
+
+def test_provenance_collections_deep_immutable() -> None:
+    # LESSON 8 (1.6b): the container itself is immutable — .append() on any of the 7 collections
+    # raises (a "frozen" trust record can no longer be mutated in place). Closes carry-forward (c).
+    p = ProvenancePacket(**_valid_kwargs())
+    for field in (*STRING_LIST_FIELDS, "evidence"):
+        with pytest.raises(AttributeError):
+            getattr(p, field).append(object())  # tuple has no .append

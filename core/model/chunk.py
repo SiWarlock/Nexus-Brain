@@ -47,7 +47,7 @@ with warnings.catch_warnings():
         ownership: Literal["owned", "foreign", "supplemental"]
         register: Literal["plain", "deep"] = Field(...)  # required; Field(...) defeats the shadow
         text: TextStr
-        vector: list[float]  # dim/finiteness pinned by the Phase-3.1 Vector(dim) binding, not here
+        vector: list[float]  # list→tuple (LESSON 8) deferred to Phase 3.1 (Vector(dim) owns repr)
         anchor: IdentityStr  # file:line[-line] span; the 1.3 Anchor references this, not embedded
         content_hash: IdentityStr
         last_resolved_sha: IdentityStr

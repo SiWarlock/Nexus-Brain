@@ -300,3 +300,13 @@ def test_result_models_frozen_extra_forbid() -> None:
     for model, payload in payloads:
         with pytest.raises(ValidationError):
             model.model_validate(payload)
+
+
+def test_composed_mcpresult_provenance_immutable() -> None:
+    # LESSON 8 (1.6b) — the END-TO-END closure of the 1.5c2 catch: a composed McpResult's
+    # provenance.evidence is a tuple, so it can no longer be .append-mutated through the result
+    # envelope (it was list[EvidenceRef] when 1.5c2 landed; 1.6b tuple-ifies ProvenancePacket).
+    r = McpResult.model_validate(_result_kwargs())
+    assert isinstance(r.provenance.evidence, tuple)
+    with pytest.raises(AttributeError):
+        r.provenance.evidence.append(object())  # type: ignore[attr-defined]  # tuple has no .append

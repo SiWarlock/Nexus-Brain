@@ -38,4 +38,6 @@ class Registry(BaseModel):
 
     schema_version: PositiveInt = Field(...)  # registry-FILE format version (the 1.2d migrator)
     # required, but {} is valid (a fresh machine has no projects); project_id keys are non-empty.
+    # NOTE (1.6b): a dict has no clean frozen form — LESSON-8 deep immutability for `entries` is a
+    # known residual (out of the list→tuple scope); revisit if it becomes a mutation hazard.
     entries: dict[IdentityStr, RegistryEntry] = Field(...)

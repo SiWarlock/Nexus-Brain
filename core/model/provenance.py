@@ -22,21 +22,22 @@ from model.evidence import EvidenceRef
 class ProvenancePacket(BaseModel):
     """The per-answer grounding/trust record — frozen + closed (`extra="forbid"`).
 
-    List fields are REQUIRED with no default (a trust record is constructed deliberately), but an
-    empty list is valid — an ungrounded/flagged answer carries `citations=[]` + `evidence=[]`.
-    `evidence` composes the frozen `EvidenceRef` by value (parse-don't-trust extends to each nested
-    element). Immutable: a re-grounded answer mints a new packet, never an in-place mutation.
+    Collection fields are `tuple` (LESSON 8 deep immutability — a list input coerces) and REQUIRED
+    with no default (a trust record is constructed deliberately), but EMPTY is valid — an
+    ungrounded/flagged answer carries `citations=()` + `evidence=()`. `evidence` composes the frozen
+    `EvidenceRef` by value (parse-don't-trust extends to each nested element). Immutable: a
+    re-grounded answer mints a new packet, never an in-place mutation.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    project_ids: list[IdentityStr]
-    source_ids: list[IdentityStr]
-    citations: list[IdentityStr]  # file:line[-range] TOKENS; span format producer-owned (Phase-4)
-    commit_shas: list[IdentityStr]  # the SHAs the citations are grounded at
-    session_ids: list[IdentityStr]
+    project_ids: tuple[IdentityStr, ...]
+    source_ids: tuple[IdentityStr, ...]
+    citations: tuple[IdentityStr, ...]  # file:line TOKENS; span format producer-owned (Phase-4)
+    commit_shas: tuple[IdentityStr, ...]  # the SHAs the citations are grounded at
+    session_ids: tuple[IdentityStr, ...]
     recorded_sha: IdentityStr | None = None  # the recorded-Citations SHA (optional)
     index_freshness: IdentityStr  # freshness marker; vocab owned by the Phase-4 subsystem
     confidence: float = Field(..., ge=0.0, le=1.0)  # the answer's overall confidence
-    drift_markers: list[IdentityStr]
-    evidence: list[EvidenceRef]  # §10 evidence chips, composed by value (Appendix-A:217)
+    drift_markers: tuple[IdentityStr, ...]
+    evidence: tuple[EvidenceRef, ...]  # §10 evidence chips, composed by value (Appendix-A:217)
