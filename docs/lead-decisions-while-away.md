@@ -226,3 +226,25 @@ Suite 137/137, gates clean. **Lead accepted — cardinal Rule #4 chokepoint cont
 **✓ TRACKED (2026-06-18)** — gated same as Task 2.S, 3 touchpoints: (1) **Phase 4.2 ★SAFETY task** — the real CodeGraph CLI shell-out adapter (`core/retrieval/codegraph.py` + `ports/codegraph.py` impl) with argv-hardening (`shell=False` + single fixed non-option argv per arg + `--` terminator + absolute-resolved dir) as the PRIMARY query-arg injection defense; security-reviewer mandatory. (2) **Acceptance(4) gate** — Phase 4 does not close without a security-reviewer-verified injection test (untrusted query args can't inject a flag/command). (3) **Carry-forward handoff flag** for `/phase-exit 1`. Correctly anchored at **Phase 4.2** (where the CodeGraph adapter actually lands per the plan — I'd loosely said "Phase 3"; orchestrator corrected), still on the spine track.
 
 **Reversibility.** N/A (finding; dir fix landed in-slice; query-arg runtime defense gated to Phase 4.2 on the spine).
+
+---
+
+## D-A15 — StrictBool for frozen safety/security/lifecycle/output booleans (owner-approved)
+**When:** 2026-06-18 raised (1.5b security nit) · owner-approved 2026-06-18 via lead · **Category:** load-bearing contract surface (cross-track) + parse-don't-trust hardening · **Raised by:** `contract-core-orchestrator` (from the 1.5b security-reviewer)
+
+**Context.** Pydantic's default `bool` is lax (coerces `1`/`"yes"`/`"on"`/`"true"`→`True`). On frozen-contract fields that gate exposure/consent/authorization/lifecycle/output, that's a parse-don't-trust hole. No fail-open today (malformed rejected, defaults `False`), but tightening a frozen cross-track contract post-fork is breaking — so the line gets drawn before the fork. The impl correctly did NOT change it unilaterally (it would split host/chunk/policy consistency).
+
+**Decision (owner-approved).** Adopt `StrictBool` UNIFORMLY for every frozen-contract boolean: policy `mcp.expose`/`federation.visible`/`sessions.consent` (the §16 opt-in gates), `HostAction.authorized` (the §7 capability stamp — defense-in-depth atop the `perform` capability re-check, LESSON 9), `HostResult.ok` + `McpResult.truncated` (system-output flags), `Chunk.tombstone` (lifecycle). **Exemption:** deny-strengthening `Literal[True]` markers (`PolicyDenied.denied`). Landed 1.6c `de63ead`; LESSON 17.
+
+**Reversibility.** N/A — `StrictBool` is wire-identical to `bool` (snapshots stay green); a pure parse-tightening.
+
+---
+
+## D-A16 — IdentityStr Unicode char-policy: reject control/format/bidi/zero-width on identities (owner-approved)
+**When:** 2026-06-20 · owner-approved (present/driving) via lead · **Category:** load-bearing contract surface (cross-track) + medium security finding · **Raised by:** `contract-core-orchestrator` (from the 1.6a security-reviewer)
+
+**Context.** 1.6a consolidated the 11 duplicated identity-string aliases into `core/_types.py`. The security-reviewer found the control-char rejection was ASCII-only — frozen identity fields still admitted Unicode bidi-overrides (U+202E), zero-width (U+200B), C1 controls, BOM (U+FEFF), separators — a homoglyph/bidi/invisible-char residual on cross-track identity fields (`SecretRef` service/account, provenance citation tokens, paths, SHAs). Not a regression; tightening post-fork is breaking → draw the line before fork.
+
+**Decision (owner-approved).** Extend `IdentityStr` to reject Unicode control/format/bidi/zero-width/separator categories (`Cc`/`Cf`/`Zl`/`Zp`) while ALLOWING legitimate unicode letters/digits (so unicode source paths like `日本語.py` validate). `TextStr` (content — `chunk.text` is source code) stays permissive; the bidi/format CONTENT sanitization (Trojan-Source) is deferred to the **Phase-2 ingest/redactor** (flag/strip at the consuming phase, not a frozen-contract hard-reject that would refuse legitimate multilingual content — LESSON 14). Landed 1.6a `0520304`; LESSON 16. Routed as an orchestrator decision (clear-cut hardening, medium) + owner-confirmed per the load-bearing-cross-track-contract + security-finding class (same posture as D-A15/StrictBool).
+
+**Reversibility.** Full — widening an allow-list later is additive (freeze tight, widen additively — LESSON 14).
