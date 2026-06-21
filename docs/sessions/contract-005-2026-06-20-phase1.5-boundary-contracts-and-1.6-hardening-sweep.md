@@ -3,7 +3,7 @@
 - **Phase:** 1 (Shared contracts & ports freeze — the bottleneck). Tasks **1.5** (a/b/c1/c2) + **1.6** (a/b/c).
 - **Track:** contract (worktree `project-brain-contract`, branch `track/contract`).
 - **Predecessor session:** [contract-004 (handoff — end-of-1.4 cycle)](contract-004-2026-06-18-phase1-trust-and-ports-handoff.md) · prior impl session [contract-003](contract-003-2026-06-18-trust-contracts-and-port-freeze.md)
-- **Successor session:** _(next implementer session — fresh full-runway team for the fork-gate stretch: spikes 0.3/0.4 → /phase-exit 1)_
+- **Successor session:** [contract-007 (Phase 0 spike 0.4 — LanceDB maintenance bake-off rig)](contract-007-2026-06-20-phase0-lancedb-bakeoff-rig.md)
 - **Cycle close-out:** end of the 1.6-complete boundary (context auto-cycle, lead-approved + owner-blessed).
 
 ## Why this session existed
