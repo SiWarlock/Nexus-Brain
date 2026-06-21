@@ -5,6 +5,9 @@ description = "Nexus Brain — local-first portfolio memory · retrieval · reas
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "pydantic>=2",
+    # gitwildmatch (.gitignore/.brainignore) matching for §8 discovery. Pinned <1 to lock the
+    # "gitwildmatch" factory name (renamed to "gitignore" in the unreleased pathspec 1.0.0).
+    "pathspec>=0.12,<1",
 ]
 
 [dependency-groups]
@@ -28,12 +31,12 @@ line-length = 100
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["ports", "model", "testing", "tests"]
+known-first-party = ["ports", "model", "testing", "tests", "ingest"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["ports", "model", "testing", "tests"]
+files = ["ports", "model", "testing", "tests", "ingest"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
