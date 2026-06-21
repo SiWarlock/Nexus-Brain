@@ -8,6 +8,15 @@ dependencies = [
     # gitwildmatch (.gitignore/.brainignore) matching for §8 discovery. Pinned <1 to lock the
     # "gitwildmatch" factory name (renamed to "gitignore" in the unreleased pathspec 1.0.0).
     "pathspec>=0.12,<1",
+    "llama-index-core>=0.14,<0.15",
+    "tree-sitter>=0.25,<0.26",
+    # Individual tree-sitter grammars — ONLY the 4 the vendored parser ships config for (python/
+    # typescript/cpp/php). Others route to the line-tiling fallback; re-add a grammar here when its
+    # parser-config lands (a one-line additive change). Capped <0.26 (supply-chain pin posture, §18).
+    "tree-sitter-python>=0.23,<0.26",
+    "tree-sitter-typescript>=0.23,<0.26",
+    "tree-sitter-cpp>=0.23,<0.26",
+    "tree-sitter-php>=0.24,<0.26",
 ]
 
 [dependency-groups]
@@ -26,6 +35,9 @@ package = false
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+# Vendored third-party code (MIT CodeHierarchyNodeParser) — not authored here; excluded from lint
+# AND format so it stays byte-faithful to upstream. Our wrapper seam in chunk.py stays strict.
+extend-exclude = ["ingest/_code_hierarchy.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -43,6 +55,19 @@ files = ["ports", "model", "testing", "tests", "ingest"]
 # typed package here, so treat its imports as untyped rather than erroring under --strict.
 [[tool.mypy.overrides]]
 module = "ci.*"
+ignore_missing_imports = true
+
+# Vendored third-party parser — not type-checked; importers see its symbols as Any (follow_imports
+# = skip), so the chunk.py seam stays strict without depending on the vendored file's (absent) types.
+[[tool.mypy.overrides]]
+module = "ingest._code_hierarchy"
+follow_imports = "skip"
+ignore_errors = true
+ignore_missing_imports = true
+
+# Heavy framework imported only by the vendored parser + the chunk_code seam; no local stubs.
+[[tool.mypy.overrides]]
+module = ["llama_index.*", "tree_sitter", "tree_sitter_python"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

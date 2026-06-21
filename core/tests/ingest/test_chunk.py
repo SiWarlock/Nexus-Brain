@@ -16,11 +16,22 @@ import pytest
 from pydantic import ValidationError
 
 from _types import IDENTITY_MAX_LEN, TEXT_MAX_LEN
-from ingest.chunk import ANCHOR_SPAN_FIELDS, ChunkDraft, chunk_docs
+from ingest.chunk import ANCHOR_SPAN_FIELDS, ChunkDraft, chunk_code, chunk_docs
 from ingest.classify import FileClassification
 from model.chunk import Chunk
 
 pytestmark = pytest.mark.unit
+
+
+def _code_cls(**overrides: str) -> FileClassification:
+    kwargs: dict[str, str] = {
+        "doc_or_code": "code",
+        "producer": "human",
+        "doc_type": "source",
+        "ownership": "owned",
+    }
+    kwargs.update(overrides)
+    return FileClassification(**kwargs)  # type: ignore[arg-type]
 
 
 def _doc_cls(**overrides: str) -> FileClassification:
@@ -274,3 +285,184 @@ def test_chunk_docs_nul_byte_raises_at_boundary() -> None:
     # LESSON 14). Pinned so the harsh fail-mode is deliberate, not incidental.
     with pytest.raises(ValidationError):
         chunk_docs("# A\nb\x00d\n", _doc_cls(), "docs/x.md")
+
+
+# --- 2.2b: code chunking via the vendored CodeHierarchyNodeParser ---------------------------------
+
+_PY_SRC = '''import os
+
+
+def top_level_fn(x):
+    return x + 1
+
+
+class Greeter:
+    """A small greeter."""
+
+    def __init__(self, name):
+        self.name = name
+
+    def greet(self):
+        prefix = "hello"
+        suffix = "!"
+        parts = [prefix, self.name, suffix]
+        joined = " ".join(parts)
+        cleaned = joined.strip()
+        return cleaned
+'''
+
+
+def _symbols(drafts: tuple[ChunkDraft, ...]) -> list[str | None]:
+    return [d.target_symbol for d in drafts]
+
+
+def test_chunk_code_splits_by_scope() -> None:
+    # spec(§8): AST chunking — a Python file yields drafts that preserve its code scopes, in source
+    # order, with NO content dropped (R-PARTIAL: every top-level identifier appears in some draft).
+    drafts = chunk_code(_PY_SRC, _code_cls(), "src/app.py")
+    assert len(drafts) >= 1
+    joined = "\n".join(d.text for d in drafts)
+    for ident in ("top_level_fn", "Greeter", "greet"):
+        assert ident in joined, ident
+    starts = [d.target_line_start for d in drafts]
+    assert starts == sorted(starts)  # source order
+
+
+def test_chunk_code_target_symbol_is_scope_name() -> None:
+    # spec(§8): a split scope draft carries the parser's DOTTED qualified scope name (Class.method),
+    # not just the innermost name — so the hierarchy is recoverable from the symbol path.
+    drafts = chunk_code(_PY_SRC, _code_cls(), "src/app.py")
+    syms = [s for s in _symbols(drafts) if s]
+    assert "Greeter.greet" in syms, syms
+
+
+def test_chunk_code_line_span_bounds_scope() -> None:
+    # spec(§8): every draft span is 1-based, end>=start, within the file, anchor matches the syntax.
+    n_lines = len(_PY_SRC.splitlines())
+    for d in chunk_code(_PY_SRC, _code_cls(), "src/app.py"):
+        assert 1 <= d.target_line_start <= d.target_line_end <= n_lines
+        expected = (
+            str(d.target_line_start)
+            if d.target_line_start == d.target_line_end
+            else f"{d.target_line_start}-{d.target_line_end}"
+        )
+        assert d.anchor == expected
+
+
+def test_chunk_code_draft_text_matches_source_span() -> None:
+    # spec(§8): NORTH-STAR anchor accuracy — every code draft's text occupies its span: draft.text
+    # == the source lines at [start, end], modulo TextStr's contractual edge-whitespace strip (the
+    # frozen Chunk.text type strips surrounding whitespace; internal content is verbatim). A
+    # skeleton/elided-text draft (placeholders ≠ source) would still fail this.
+    src_lines = _PY_SRC.splitlines()
+    drafts = chunk_code(_PY_SRC, _code_cls(), "src/app.py")
+    assert len(drafts) >= 2  # at least one split leaf + the complement
+    for d in drafts:
+        assert d.text == "\n".join(src_lines[d.target_line_start - 1 : d.target_line_end]).strip()
+
+
+def test_chunk_code_full_coverage_no_overlap() -> None:
+    # spec(§8): R-PARTIAL — every NON-blank source line is covered exactly once (no span overlap;
+    # blank lines legitimately belong to no draft since TextStr strips edge whitespace).
+    src_lines = _PY_SRC.splitlines()
+    covered: set[int] = set()
+    for d in chunk_code(_PY_SRC, _code_cls(), "src/app.py"):
+        span = range(d.target_line_start, d.target_line_end + 1)
+        assert covered.isdisjoint(span), "spans overlap"
+        covered.update(span)
+    for i, line in enumerate(src_lines, start=1):
+        if line.strip():
+            assert i in covered, f"non-blank line {i} not covered"
+
+
+def test_chunk_code_carries_classification() -> None:
+    # spec(§8): the classify→chunk hand-off — axes + source_path mirror the input.
+    cls = _code_cls(producer="gstack", ownership="foreign")
+    d = chunk_code(_PY_SRC, cls, "vendor/app.py")[0]
+    assert (d.doc_or_code, d.producer, d.ownership, d.source_path) == (
+        "code",
+        "gstack",
+        "foreign",
+        "vendor/app.py",
+    )
+
+
+def test_chunk_code_unsupported_language_falls_back() -> None:
+    # spec(§8): a language with no vendored grammar → 2.2a line-tiling fallback (symbol None),
+    # full content coverage, R-PARTIAL (nothing dropped).
+    src = 'fn main() {\n    println!("hi");\n}\n'
+    drafts = chunk_code(src, _code_cls(), "src/main.rs")
+    assert len(drafts) >= 1
+    assert all(d.target_symbol is None for d in drafts)
+    assert "println" in "\n".join(d.text for d in drafts)
+
+
+def test_chunk_code_parse_error_falls_back(monkeypatch: pytest.MonkeyPatch) -> None:
+    # spec(§8): R-PARTIAL — a parser exception is caught at the seam → line-tiling fallback, never
+    # raised past chunk_code, never drops the file.
+    import ingest.chunk as chunk_mod
+
+    def _boom(_text: str, _language: str) -> object:
+        raise RuntimeError("synthetic parser failure")
+
+    monkeypatch.setattr(chunk_mod, "_parse_code", _boom)
+    drafts = chunk_code(_PY_SRC, _code_cls(), "src/app.py")
+    assert len(drafts) >= 1
+    assert all(d.target_symbol is None for d in drafts)
+    assert "top_level_fn" in "\n".join(d.text for d in drafts)
+
+
+def test_chunk_code_deeply_nested_source_does_not_crash() -> None:
+    # spec(§8): R-PARTIAL on a REAL pathological input (not a mock) — deeply-nested source that can
+    # trip RecursionError in the parser must degrade to the line-tiling fallback, never crash/hang.
+    depth = 1500  # past CPython's default recursion limit
+    src = "".join("    " * i + f"if x{i}:\n" for i in range(depth)) + "    " * depth + "pass\n"
+    drafts = chunk_code(src, _code_cls(), "src/deep.py")  # must not raise
+    assert len(drafts) >= 1
+    assert "x0" in "\n".join(d.text for d in drafts)  # content preserved
+
+
+def test_chunk_code_oversized_file_falls_back() -> None:
+    # spec(§8): a file over _MAX_PARSE_BYTES skips the parser (memory guard) → line-tiling fallback,
+    # full content coverage, symbol None.
+    src = "".join(f"def f{i}():\n    return {i}\n" for i in range(120_000))  # > 2 MB
+    drafts = chunk_code(src, _code_cls(), "src/huge.py")
+    assert len(drafts) >= 1
+    assert all(d.target_symbol is None for d in drafts)
+    assert all(len(d.text) <= TEXT_MAX_LEN for d in drafts)
+
+
+def test_chunk_code_oversized_scope_subsplit() -> None:
+    # spec(§5): a code scope over TEXT_MAX_LEN is sub-split via the 2.2a tiler → cap-bounded drafts.
+    body = "\n".join(f"    x{i} = {i} + {i}" for i in range(900))  # a huge function body > 8KB
+    src = f"def huge():\n{body}\n"
+    drafts = chunk_code(src, _code_cls(), "src/big.py")
+    assert all(len(d.text) <= TEXT_MAX_LEN for d in drafts)
+    assert len(drafts) >= 2
+
+
+def test_chunk_code_deterministic() -> None:
+    # determinism posture: AST parse is deterministic → identical draft tuple across calls.
+    assert chunk_code(_PY_SRC, _code_cls(), "src/app.py") == chunk_code(
+        _PY_SRC, _code_cls(), "src/app.py"
+    )
+
+
+def test_chunk_code_empty_file_returns_empty() -> None:
+    # spec(§8): empty / whitespace-only source → () (mirrors docs; nothing dropped).
+    assert chunk_code("", _code_cls(), "src/app.py") == ()
+    assert chunk_code("   \n\n", _code_cls(), "src/app.py") == ()
+
+
+def test_chunk_code_register_value() -> None:
+    # spec(§5): code drafts get the v0 register default "plain" (design Q4).
+    assert all(d.register == "plain" for d in chunk_code(_PY_SRC, _code_cls(), "src/app.py"))
+
+
+def test_chunkdraft_contract_pins_still_hold() -> None:
+    # spec(§5): no ChunkDraft shape regression — the 2.2a closed-set + subset pins still hold.
+    for field in ("doc_or_code", "ownership", "register"):
+        assert get_args(ChunkDraft.model_fields[field].annotation) == get_args(
+            Chunk.model_fields[field].annotation
+        )
+    assert (set(ChunkDraft.model_fields) - ANCHOR_SPAN_FIELDS) <= set(Chunk.model_fields)
