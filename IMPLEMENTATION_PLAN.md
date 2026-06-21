@@ -16,17 +16,22 @@
 
 ## Currently in progress
 
-> **NOTE — canonical living-state is the integration `main` (root) copy of this file.** This worktree copy carries the frozen task headings (used by `scripts/spec-lint.sh`) but its ticks/descriptions lag; read the **root/main** `IMPLEMENTATION_PLAN.md` "Currently in progress" + the handoff `docs/sessions/contract-006-2026-06-20-*.md` for the true state.
+**Track `contract`, Phase 0 + Phase 1 COMPLETE — executing the fork gate.** Phase-0 spikes 0.1 ✓ 0.2 ✓ **0.3 ✓** (O-FED federation — orchestrator-side investigation, verdict recorded) **0.4 ✓** (O-LANCE-BAKEOFF rig, scope B); 0.5 notarization HITL-deferred (D-A2). **Phase 1.1–1.6 ✓ frozen** (suite **232/232**; mypy --strict + ruff + format clean). Round-seal: track/contract `c97b5bd` (orchestrator) atop impl `ad8972f` + session `e8cd7f9`; root/main annotations land this commit. LESSONS §1–§18 banked. **Owner GREEN-LIT the full fork-gate sequence** (auto-merge on a CLEAR gate; hard-stop on any finding). Docs: orchestrator session `contract-008` + impl `contract-007`; decision log `docs/lead-decisions-while-away.md` (D-A1–A18).
 
-**Track `contract`, Phase 1 — at the fork-gate doorstep.** Phase 1.1–1.4 ✓ (prior rounds) · **1.5 boundary contracts ✓** (Redactor/policy/MCP — `343b6fb`/`a9df580`/`e65b9e3`/`959d5d9`) · **1.6 before-fork hardening sweep ✓** (identity consolidation+unicode-hardening `0520304` · list→tuple `ec71d48` · StrictBool `de63ead`). Suite **232/232**, mypy --strict + ruff + format clean. LESSONS §1–§17 banked. **Cycled at end-of-1.6** (context WARN). Handoff: `docs/sessions/contract-006-2026-06-20-phase1.5-1.6-orchestrator-handoff.md` (read FIRST) + decision log `docs/lead-decisions-while-away.md` (D-A1–A16) + impl doc `contract-005-*`.
-
-**Next session target:** Phase-0 spikes **0.3** (O-FED) + **0.4** (O-LANCE-BAKEOFF) → **`/phase-exit 1`** (arch-drift audit + spec-coverage + D-A13/D-A14 fork-obligation handoff) → **merge `track/contract` → `main` = the fork gate**. (0.5 notarization HITL-deferred, D-A2.)
+**Next:** **`/phase-exit 1`** (the fork-gate checklist — arch-drift [Appendix-A ↔ code; schema snapshots are the proof] · per-area reachability · spec-coverage `scripts/spec-lint.sh tests 1` + Phase-0 anchor waivers · `pip-audit` · LAND the D-A13/D-A14 fork-obligations into the contract→spine handoff) → **IF CLEAR: merge `track/contract` → `main` = THE FORK GATE** (spine + providers then spin up via the owner's separate `/team-start`). IF any audit FAILS / surfaces a finding → STOP + escalate (no merge).
 
 ---
 
 ## Carry-forward to upcoming briefs
 
-_(Empty at project start; populated as Step-9 routing surfaces operational items.)_
+> _(Triaged at the Phase-0 close-out / fork-gate. The 1.5 boundary-contracts + the 1.6 hardening-sweep bullets are **DONE → deleted**. The contract track is **at the fork** — these are now the **contract→spine/federation HANDOFF set** (the next "briefs" are post-fork, on other tracks), landed into the handoff at `/phase-exit 1`. Triage: 2 deleted, 2 added (Phase-6/Phase-3 carries), D-A13/D-A14 deduped. Hard cap ~7.)_
+
+- **★SAFETY contract→spine HANDOFF flag (D-A13; MUST appear in the `/phase-exit 1` handoff)** — Task **2.S** (Phase 2) is the cardinal Key-safety-rule-#4 proof: the §14 INV-allowlist FULL runtime proof (every FS/git/session mutation routes via `HostPort.perform`) + the real `StandaloneHost`. 1.4a seeds only the static AST-scan tripwire; the runtime per-mutator proof crosses the fork (built with the first writer, 2.4/3.1). Gated at Acceptance(2).
+- **★SAFETY contract→spine HANDOFF flag (D-A14; MUST appear in the `/phase-exit 1` handoff)** — Task **4.2** (Phase 4) argv-hardening (`shell=False` + single fixed non-option argv + `--` terminator + absolute-resolve) is the PRIMARY injection control for the CodeGraph shell-out's **query/symbol args** (un-allow-listable code identifiers); the 1.4c `resolve_codegraph_dir` allow-list covers `CODEGRAPH_DIR` only. Gated at Acceptance(4).
+- **Phase-6 federation (O-FED carry; origin: 2026-06-20 spike 0.3)** — the §11 router **merge-policy decision** + the spike recommendation (merge ONLY on a unique segment-suffix match vs `is_exported` nodes; NO heuristic tie-breaking; side-by-side-marked stays the default) + the **2 HIGH real-data risks** (sparse/empty real `unresolved_refs` caps recall; thin real `qualified_name` → homonyms). Run a real-CodeGraph validation pass once provisioned (`setup`+hash-verify, §18). See `ci/probes/federation_spike.md`.
+- **Phase-3 maintenance-contract (O-LANCE-BAKEOFF carry; origin: 2026-06-20 spike 0.4, D-A17)** — the **AUTHORITATIVE real reference-Mac bake-off run**: swap the Fake for a real `lancedb`-backed `MaintenanceTarget`, reuse the rig (`ci/bench/lancedb_maintenance/`) unchanged, set the real budget numbers (replace the PROPOSED 5000ms/2GB/5GB), fold them into §6 / the perf baseline. Deferred-not-dropped.
+- **Deferred-to-phase (captured in handoff; not next-brief)** — (a) on-disk strict key-shape rejection → Phase-2/3 startup-reconcile loader *(1.2c1; models are lenient readers by design)*; (b) Phase-2.3 redactor engine FLAG-1/2/3 (encoding-aware oracle · JWT shape-matcher · binary corpus) + wire `ci/eval/redaction_fuzz/` as the CI hard gate; (c) Phase-2 SecretStore real-keychain + log-scrub + Trojan-Source CONTENT sanitization (`chunk.text`); (d) Phase-4 EvidenceType/IdKind membership pin (D-A11), Citations payload, ProvenancePacket `index_freshness` vocab + `file:line` token format; (e) `chunk.vector`→tuple (3.1, LanceDB binding); (f) §14-ingress hardening (`_GetFilePath` max_length + query control-char) + `get_file` realpath-containment (8.2).
+- **Standing scaffolding/owner items** — (a) spec-lint numeric-ID fix `392ed4f` → carry upstream at `/scaffold-upgrade`; (b) `requires-python "<3.13"` deliberate bump when moving to 3.13; (c) **D-A3 `.claude/commands/preflight.md` Step-4 `mypy core`→`mypy .`** (HITL-deferred, recommended-FIRST owner action; implementers override with `mypy .`).
 
 ---
 
@@ -156,30 +161,30 @@ Executed row-by-row by `/phase-exit <phase>`:
 **Track:** contract · **Depends on (phases):** none.
 
 ### 0.1 — Redaction property/fuzz harness (rig)
-- [ ] A property generator + curated adversarial seed corpus for secret-shaped inputs (prefix/entropy/JSON-value classes); leak = a secret surviving into chunk text/vector OR a (simulated) MCP-egress OR cloud-egress payload.
-- [ ] Quantified **recall-floor (catchable set) + FP-ceiling**; the enumerated accepted-residual classes recorded.
-- [ ] Files: `ci/eval/redaction_fuzz/` (NEW), `docs/audits/redaction-envelope.md` (NEW).
-- [ ] Cross-doc invariant: none (test rig). Depends on: none.
+- [x] A property generator + curated adversarial seed corpus for secret-shaped inputs (prefix/entropy/JSON-value classes); leak = a secret surviving into chunk text/vector OR a (simulated) MCP-egress OR cloud-egress payload.
+- [x] Quantified **recall-floor (catchable set) + FP-ceiling** — proposed **recall ≥95% / FP ≤5%** (git-SHA 0% FP, hard sub-invariant); the 3 §18-anchored accepted-residual classes (git-SHA hex · adversarial <20-char split · sub-20-char JSON) recorded, zero deviation.
+- [x] Files: `ci/eval/redaction_fuzz/` (NEW), `docs/audits/redaction-envelope.md` (NEW). _(landed @track/contract `f2b5f6c`; 34/34 harness tests.)_
+- [x] Cross-doc invariant: none (test rig). Depends on: none.
 
 ### 0.2 — CodeGraph 1.0.1 column-diff + CodeGraphPort smoke (O-CG-COLDIFF)
-- [ ] Diff the live `.codegraph` 0.9.7 column set vs `@colbymchenry/codegraph@1.0.1` `schema.sql`; confirm the 5 tables + `schema_versions=1`; smoke the CLI shell-out for `explore/node/callers/search`.
-- [ ] Pin `=1.0.1` exact; record the `trace`/`context` → `explore` migration + `CODEGRAPH_DIR` handling.
-- [ ] Files: `ci/probes/codegraph_coldiff.md` (NEW). Cross-doc invariant: none. Depends on: none.
+- [x] Diff the live `.codegraph` 0.9.7 column set vs `@colbymchenry/codegraph@1.0.1` `schema.sql`; confirm the 5 tables + `schema_versions` — **CORRECTION: live `MAX(version)=5`, NOT `=1`; assert `>=5`**. CLI smoke ✓ — but `search` kind → CLI `codegraph query` (NOT `codegraph search`); system codegraph is v0.9.7 (lacks `explore`/`node`).
+- [x] Pin `=1.0.1` exact (verdict: SAFE); record the `trace`/`context` → `explore` migration + `CODEGRAPH_DIR` handling.
+- [x] Files: `ci/probes/codegraph_coldiff.md` (NEW). _(landed @track/contract `f2b5f6c`.)_ Cross-doc invariant: none. Depends on: none.
 
 ### 0.3 — Federation cross-repo resolution spike (O-FED)
-- [ ] Prototype `unresolved_refs.reference_name` + namespaced `qualified_name` resolution across 2 fixture repos; measure precision; confirm the side-by-side-marked fallback path.
-- [ ] Files: `ci/probes/federation_spike.md` (NEW). Cross-doc invariant: none. Depends on: 0.2.
+- [x] Prototype `unresolved_refs.reference_name` + namespaced `qualified_name` resolution across 2 fixture repos; measure precision; confirm the side-by-side-marked fallback path. _(VERDICT: VIABLE as a uniqueness-gated merge enrichment — NOT the default; side-by-side-marked stays the conservative default, merge only on a unique segment-suffix match vs `is_exported` nodes, no heuristic tie-breaking. Synthetic precision 1.000/recall 0.967; fails safe. 2 HIGH real-data risks: sparse/empty real `unresolved_refs` caps recall; thin real `qualified_name` → more homonyms (precision preserved). §11 router design decision → Phase-6. Orchestrator-side investigation; D-A18 synthetic-corpus method, §18-aligned.)_
+- [x] Files: `ci/probes/federation_spike.md` (NEW; @track/contract `c97b5bd`). Cross-doc invariant: none. Depends on: 0.2.
 
 ### 0.4 — LanceDB maintenance-contract bake-off rig (O-LANCE-BAKEOFF)
-- [ ] Harness to measure `optimize()` latency, index-build RAM, steady-state disk (versions+transactions) on a representative multi-repo corpus on the reference Mac (Apple-Silicon, 16–32 GB).
-- [ ] Files: `ci/bench/lancedb_maintenance/` (NEW). Cross-doc invariant: none. Depends on: none.
+- [x] Harness to measure `optimize()` latency, index-build RAM, steady-state disk (versions+transactions) on a representative multi-repo corpus on the reference Mac (Apple-Silicon, 16–32 GB). _(Scope B, D-A17: reusable RIG + REAL stdlib instrumentation + a Fake `MaintenanceTarget` + documented methodology + best-effort local baseline. The AUTHORITATIVE real reference-Mac run (real `lancedb` + embedding model + multi-repo corpus) is a **Phase-3 carry — deferred, not dropped**; PROPOSED ceilings 5000ms/2GB/5GB are placeholders. LESSON 18.)_
+- [x] Files: `ci/bench/lancedb_maintenance/` (NEW; @track/contract `ad8972f`, 15 out-of-band tests). Cross-doc invariant: none. Depends on: none.
 
 ### 0.5 — Notarization spike
 - [ ] Prove a PyInstaller sidecar + Tauri `.app` notarizes under hardened runtime (deep-sign order; `spctl`/`codesign --deep` gate). Document the signing recipe.
 - [ ] Files: `packaging/notarization-spike.md` (NEW). Cross-doc invariant: none. Depends on: none.
 
 ### Acceptance criteria (0)
-- [ ] All 0.X ticked; each spike has a recorded verdict; the fuzz + bake-off rigs are reusable by later phases.
+- [ ] All 0.X ticked; each spike has a recorded verdict; the fuzz + bake-off rigs are reusable by later phases. _(0.1 ✓ · 0.2 ✓ · 0.3 ✓ · 0.4 ✓ — verdicts in `ci/probes/` + `docs/audits/redaction-envelope.md` + the rig READMEs; fuzz (`ci/eval/redaction_fuzz/`) + bake-off (`ci/bench/lancedb_maintenance/`) rigs reusable. **0.5 notarization HITL-deferred (D-A2)** — live step parked pending owner credentials, NOT dropped. Left unticked pending the owner's 0.5 resolution; Phase 0 is otherwise complete and does not block the fork gate — /phase-exit will adjudicate this row's waiver.)_
 
 ---
 
@@ -192,31 +197,31 @@ Executed row-by-row by `/phase-exit <phase>`:
 **Track:** contract · **Depends on (phases):** 0.
 
 ### 1.1 — Determinism seams: `Clock` + `Seed`/`IdGen` ports
-- [ ] `Clock` and `Seed`/`IdGen` port interfaces + real + fake implementations; injectable everywhere (anchor revalidation, drift ranking, manifest timestamps, id minting).
-- [ ] Files: `core/ports/clock.py`, `core/ports/idgen.py` (NEW). Cross-doc invariant: NEW (`Clock`, `Seed/IdGen` — §7). Depends on: none.
+- [x] `Clock` and `Seed`/`IdGen` port interfaces + real + fake implementations; injectable everywhere (anchor revalidation, drift ranking, manifest timestamps, id minting). _(landed @track/contract `61853b3`; +`monotonic()`, +`Seed.rng()`; fakes in `core/testing/fakes.py`; 16 tests `spec(§7)`.)_
+- [x] Files: `core/ports/clock.py`, `core/ports/idgen.py` (NEW). Cross-doc invariant: NEW (`Clock`, `Seed/IdGen` — §7). Depends on: none.
 
 ### 1.2 — The data contracts: chunk schema · version stamp · manifest + registry
-- [ ] Frozen `Chunk`, store-level **version stamp**, `.project-brain/manifest.json` + global **registry** schemas (the §5 source-of-truth law: SHA-tag canonical, stamp canonical for schema/model/dim, manifest+registry derived); `schemaVersion` with a forward-only migrator + backup-before-migrate + downgrade-refuse.
-- [ ] Files: `core/model/{chunk,stamp,manifest,registry}.py`, `core/model/migrations.py` (NEW). Cross-doc invariant: NEW (Chunk, version stamp, Manifest+Registry — §5; **§2.5-seam → brief RED outline MUST include the schema-snapshot test, `spec(§5)`-tagged**). Depends on: 1.1.
+- [x] Frozen `Chunk`, store-level **version stamp**, `.project-brain/manifest.json` + global **registry** schemas (the §5 source-of-truth law: SHA-tag canonical, stamp canonical for schema/model/dim, manifest+registry derived); `schemaVersion` with a forward-only migrator + backup-before-migrate + downgrade-refuse. _(landed @track/contract: chunk `269b68e`, stamp `4fab4ab`, manifest `07c3cba`, registry `665dd8b`, migration engine `bb000b1`. Stamp omits the SHA (version tag canonical). backup+I/O are HOST-owned, Phase 2+. 82 tests.)_
+- [x] Files: `core/model/{chunk,stamp,manifest,registry}.py`, `core/model/migrations.py` (NEW). Cross-doc invariant: NEW (Chunk, version stamp, Manifest+Registry — §5; schema-snapshot tests `spec(§5)`-tagged, +by-alias on-disk-key snapshot for the serialized files). Appendix-A reconciled (Chunk 16→19, manifest 9→12, registry 5→6). Depends on: 1.1.
 
 ### 1.3 — Trust contracts: `Anchor` · `ProvenancePacket` + `EvidenceRef`
-- [ ] Frozen `Anchor` (state enum incl. recovery + `orphaned`), `ProvenancePacket`, `EvidenceRef` (→ the 11-value EvidenceType / 22 IdKind at the seam).
-- [ ] Files: `core/model/{anchor,provenance,evidence}.py` (NEW). Cross-doc invariant: NEW (Anchor, ProvenancePacket, EvidenceRef — §10; **§2.5-seam → schema-snapshot test `spec(§10)`**). Depends on: 1.1.
+- [x] Frozen `Anchor` (5-value `AnchorState`; `deleted`=record-lifecycle not a state), `EvidenceRef` (EvidenceType membership DEFERRED — **D-A11**), `ProvenancePacket` (10 fields incl. `evidence: tuple[EvidenceRef]` — additive **D-A12**). _(landed @track/contract as 3 atomic ★ sub-slices: Anchor `5b50b5f`, EvidenceRef `518da07`, ProvenancePacket `77276e3`; spec(§10) snapshots; 36 trust-contract tests.)_
+- [x] Files: `core/model/{anchor,provenance,evidence}.py` (NEW). Cross-doc invariant: NEW (Anchor, ProvenancePacket, EvidenceRef — §10; spec(§10) snapshots). Appendix-A:216/217 reconciled (evidence[] +D-A12, EvidenceType deferral +D-A11, `deleted` §5 clarification). Depends on: 1.1.
 
 ### 1.4 — The ports: Host · providers · CodeGraph · Event · Secret · Observability
-- [ ] `HostPort` (`capabilities/authorize/perform`; closed allowlist enum), `EmbeddingProvider`/`Reranker`/`ContextStrategy`/`ModelProvider`, `CodeGraphPort`, `EventSource`, `SecretStore`(keychain), `ObservabilitySink` — interfaces + Fake doubles + cassette record/replay for cloud + Citations.
-- [ ] Acceptance: StandaloneHost allowlist is a closed typed set `{own_store_write|owned_doc_refresh|consented_host_config}`; CodeGraphPort asserts `schema_versions` at startup + reads `CODEGRAPH_DIR`.
-- [ ] Files: `core/ports/{host,providers,codegraph,events,secrets,observability}.py`, `core/testing/fakes.py` (NEW). Cross-doc invariant: NEW (the 9 ports — §7; **§2.5-seam → schema-snapshot test `spec(§7)`**). Depends on: 1.1.
+- [x] All 11 ports frozen as interfaces + Fake doubles (4 atomic sub-slices). `HostPort` (`8aa6935` — fail-closed authorize + perform capability-recheck + §14 tripwire; **SAFETY**), 4 provider ports (`e9d1e51` — behavioral Protocols + result types), `CodeGraphPort` (`b1dafcc` — spike-0.2 corrections + CODEGRAPH_DIR allow-list), `EventSource`/`SecretStore`/`ObservabilitySink` (`05c3551` — SecretRef-no-secret #3 pin). _(suite 174/174; cassette record/replay **re-sequenced** to providers/eval — not a freeze contract.)_
+- [x] Acceptance: HostCapability is a closed typed StrEnum `{own_store_write|owned_doc_refresh|consented_host_config}` (membership-snapshot pinned); CodeGraphPort schema-gate asserts `MAX≥5` + `CODEGRAPH_DIR` allow-list resolver. _(Real StandaloneHost + CodeGraph CLI adapter deferred to Phase-2/4.2 — see Task 2.S/D-A13 + Phase-4.2/D-A14.)_
+- [x] Files: `core/ports/{host,providers,codegraph,events,secrets,observability}.py`, `core/testing/fakes.py` (NEW). Cross-doc invariant: NEW (the ports — §7; spec(§7) snapshots for data types; behavioral Protocols carry no field-snapshot). **3 additive Appendix-A rows** (EventSource/SecretStore/ObservabilitySink — D-A12-class). Depends on: 1.1.
 
 ### 1.5 — Boundary contracts: MCP tool contract · `policy.yaml` · `Redactor` interface
-- [ ] Frozen MCP tool signatures (params incl. scope enum + project-id + top-k; result = chip+file:line+ids+provenance; streaming; policy-denied marker; **ingress validation** rules) · `policy.yaml` schema (providers/privacy `local|cloud`/boundary-filter/consent) · `Redactor` interface (`redact(payload, sink∈{persist,mcp_egress,cloud_egress})`).
-- [ ] Files: `core/model/{mcp_contract,policy,redactor_iface}.py` (NEW). Cross-doc invariant: NEW (MCP contract, policy.yaml, Redactor — §14/§16/§18; **§2.5-seam → schema-snapshot test `spec(§14)`/`spec(§18)`**). Depends on: 1.1.
+- [x] Frozen MCP tool signatures (params incl. scope enum + project-id + top-k; result = chip+file:line+ids+provenance; streaming; policy-denied marker; **ingress validation** rules) · `policy.yaml` schema (providers/privacy `local|cloud`/boundary-filter/consent) · `Redactor` interface (`redact(payload, sink∈{persist,mcp_egress,cloud_egress})`). _(landed @track/contract as 4 atomic sub-slices: Redactor iface `343b6fb` [§18, LESSON 12], policy.yaml fail-CLOSED `a9df580` [§16, LESSON 13], MCP ingress `e65b9e3` [§14, LESSON 14], MCP results `959d5d9` [§14/§10, LESSON 15]; spec(§14)/spec(§16)/spec(§18) snapshots; PolicyDenied marker; composes ProvenancePacket/EvidenceRef.)_
+- [x] Files: `core/model/{mcp_contract,policy,redactor_iface}.py` (NEW). Cross-doc invariant: NEW (MCP contract, policy.yaml, Redactor — §14/§16/§18; **§2.5-seam → schema-snapshot test `spec(§14)`/`spec(§18)`**). Appendix-A reconciled (policy.yaml +`schema_version`; MCP tool contract += result envelope + PolicyDenied marker + ASCII ingress allow-list + bound constants — additive, D-A7). Depends on: 1.1.
 
-### 1.6 — Before-fork hardening sweep (LESSON 7/8 + StrictBool; implements §4/§5/§7; origin: 1.2c1/1.3/1.4/1.5 carry-forward)
-- [ ] **(1.6a) Shared hardened identity alias.** Consolidate the 11 duplicated `_StrippedStr`/`IdentityStr` defs (model: anchor/evidence/provenance/policy/mcp_contract; ports: codegraph/host/events/observability/secrets/providers) into ONE cross-cutting `core/_types.py` `IdentityStr` (strip + min_length + **control-char/NUL rejection + max_length cap**); retrofit all identity fields incl. the §5 whitespace-strip gap (stamp/manifest/registry use bare `Field(min_length=1)` — no strip). Content fields (`providers.cited_text`/`text`) get a separate looser treatment (not the tight identity cap). _(LESSON 7; DAG: `core/_types.py` cross-cutting — NOT `model/_types.py`, which would force a forbidden `ports`→`model` import.)_
-- [ ] **(1.6b) `list`→`tuple` for frozen-contract collections.** `ProvenancePacket` collections (project_ids/source_ids/citations/commit_shas/session_ids/drift_markers/**evidence**) + check `GenerateResult.citations` → `tuple[...]` so `frozen=True` is deeply immutable (a composed `McpResult.provenance.evidence` currently still `.append`s). _(LESSON 8; 1.4/1.5 already use tuple.)_
-- [ ] **(1.6c) `StrictBool` for safety opt-in bools.** `policy.{mcp.expose, federation.visible, sessions.consent}` + the sibling `host.py`/`chunk.py` bools → `StrictBool` (reject lax `"yes"`/`1`/`"on"` coercion; parse-don't-trust). Uniform one-pass. _(OWNER-APPROVED 2026-06-18 via lead. `PolicyDenied.denied=Literal[True]` is deny-strengthening — leave it.)_
-- [ ] Files: `core/_types.py` (NEW) + retrofits across `core/model/*` + `core/ports/*`. Cross-doc invariant: constraint-tightening on frozen contracts (additive — no field-name/shape change; schema-snapshots stay green). Depends on: 1.2/1.3/1.4/1.5.
+### 1.6 — Before-fork hardening sweep (LESSON 7/8/16/17 + StrictBool; implements §4/§5/§7; origin: 1.2c1/1.3/1.4/1.5 carry-forward)
+- [x] **(1.6a) Shared hardened identity alias** — 11 dup `_StrippedStr`/`IdentityStr` defs → ONE cross-cutting `core/_types.py` `IdentityStr` (strip + min_length + reject Unicode control/format/bidi/zero-width Cc/Cf/Zl/Zp + max_length) + `TextStr` (content); closed the `chunk.py` bare-str zero-validation gap + the §5 stamp/manifest/registry strip gap. _(landed `0520304`; LESSON 16; owner-approved unicode char-policy D-A16.)_
+- [x] **(1.6b) `list`→`tuple` for frozen-contract collections** — ProvenancePacket ×7 + GenerateResult.citations + manifest.artifacts → tuple; closed the composed-`McpResult.provenance.evidence` mutability gap. _(landed `ec71d48`; LESSON 8. chunk.vector list→tuple deferred to Phase 3.1 — LanceDB binding.)_
+- [x] **(1.6c) `StrictBool` for safety/security/lifecycle/output bools** — policy ×3 opt-ins + HostAction.authorized + HostResult.ok + chunk.tombstone + McpResult.truncated → StrictBool; PolicyDenied.denied stays Literal[True]. _(landed `de63ead`; LESSON 17; owner-approved D-A15.)_
+- [x] Files: `core/_types.py` (NEW) + retrofits across `core/model/*` + `core/ports/*`. Cross-doc invariant: constraint-tightening on frozen contracts (additive — no field-name/shape change; all schema-snapshots stayed green = the regression guard). Suite 174→232. Depends on: 1.2/1.3/1.4/1.5.
 
 ### Acceptance criteria (1)
 - [ ] All Appendix-A freeze-before-fork models exist + have schema-snapshot tests; all 11 ports have interfaces + Fake doubles; `/preflight` clean. **This is the fork gate.**
@@ -248,8 +253,13 @@ Executed row-by-row by `/phase-exit <phase>`:
 - [ ] `add <repo>` runs the pipeline → context-augment → writes the manifest (derived projection); **re-add updates, never duplicates**; R-PARTIAL (ingest whatever exists, temp generation, no half-swap).
 - [ ] Files: `core/ingest/pipeline.py`, `core/model/manifest.py` (extended) (NEW/extended). Cross-doc invariant: extended (Manifest). Depends on: 2.1, 2.2, 2.3.
 
+### 2.S — ★SAFETY: §14 INV-allowlist FULL runtime proof — every mutator routes via `HostPort.perform` (implements §14/§4 #3; origin: 1.4a; **D-A13**)
+- [ ] **Cardinal Key-safety-rule-#4 proof (crosses the fork — MUST land with the first mutation-capable module).** The `add`/manifest writer (2.4) is the first `core/` module that performs an FS mutation; it MUST route every FS/git/external/session mutation through `HostPort.perform` (StandaloneHost adapter), never a raw primitive. Add the **full runtime architecture-invariant test**: no mutation reaches the filesystem/git except through the authorized `perform` chokepoint (extends as 3.1 LanceDB writer + later writers land). Phase 1.4a seeded the **static AST-scan tripwire** (`test_inv_allowlist_no_mutation_outside_hostport` — no FS/git mutation primitive outside the host-adapter path); this task upgrades it to the runtime per-mutator proof + builds the real `StandaloneHost` (deferred from 1.4a) + **(a)** extends the static scan to session-state (`os.environ`/`putenv`) writes + **(b)** HARDENS the tripwire against the 1.4a residual — module-aliasing (`import os as _os`) + `getattr`/dynamic-dispatch resolution (1.4a security-reviewer residual, on the record) + **(c)** tests the REAL `StandaloneHost.perform` capability-recheck (1.4a only pins it on `FakeHost`). security-reviewer mandatory.
+- [ ] Files: `core/ports/host.py` (StandaloneHost adapter — NEW real impl), the INV-allowlist runtime test. Cross-doc invariant: HostPort (§7) — StandaloneHost lands. Depends on: 1.4a, 2.4.
+
 ### Acceptance criteria (2)
 - [ ] A repo ingests to redacted, chunked, anchored, context-augmented records; fuzz gate zero-leak; `add` idempotent.
+- [ ] **★SAFETY (D-A13): the §14 INV-allowlist runtime proof is green — every FS/git/session mutation routes through `HostPort.perform`; no raw mutation primitive escapes the chokepoint. Phase 2 does NOT close without this (the cardinal Rule #4 proof; tripwire seeded in 1.4a).**
 
 ---
 
@@ -293,6 +303,7 @@ Executed row-by-row by `/phase-exit <phase>`:
 
 ### 4.2 — CodeGraphPort + whole-file hydration (redacted)
 - [ ] Structural tools (callers/callees/impact/explore/search) via `CodeGraphPort` CLI shell-out + tree-sitter fallback; whole-file hydration; **hydration egress passes the Redactor**.
+- [ ] **★SAFETY (D-A14): argv-hardened shell-out — the PRIMARY injection defense for the query/symbol args.** The CLI adapter shells out **untrusted query terms + symbol names** (from retrieval) which CANNOT be charset-allow-listed (arbitrary code identifiers, e.g. `MyClass::method<T>`). Their ONLY control is execution containment: **`shell=False` + each arg a SINGLE fixed non-option argv element + the `--` options-terminator before positional args + absolute-resolve of the dir** (the 1.4c `resolve_codegraph_dir` allow-list covers `CODEGRAPH_DIR` only, NOT the query args). A shell-out of unvalidated query args reintroduces the exact command-injection the 1.4c dir-fix closed. security-reviewer mandatory; gated at Acceptance(4). _(origin: 1.4c; the 1.4c finding's Phase-3 residual, upgraded from defense-in-depth to primary control)._
 - [ ] Files: `core/retrieval/{codegraph,hydrate}.py`, `core/ports/codegraph.py` (impl) (NEW/extended). Cross-doc invariant: extended (CodeGraphPort). Depends on: 1.4, 0.2, 2.3.
 
 ### 4.3 — Grounding gate + anchor revalidation + provenance
@@ -302,6 +313,7 @@ Executed row-by-row by `/phase-exit <phase>`:
 
 ### Acceptance criteria (4)
 - [ ] A query returns a grounded answer; the gate flags every unsupported/stale citation deterministically; provenance packet complete.
+- [ ] **★SAFETY (D-A14): the CodeGraph CLI shell-out is argv-hardened** — `shell=False`, every query/symbol arg a single fixed non-option argv element, `--` options-terminator, absolute-resolved dir; a security-reviewer-verified injection test (untrusted query args cannot inject a flag or command). Phase 4 does NOT close without this (the query-arg injection control; origin 1.4c).
 
 ---
 
@@ -560,4 +572,42 @@ _(Empty at project start; populated as scope cuts surface. Seeded nice-to-haves 
 
 ## Log
 
-_(Empty at project start; populated at every `/orchestrate-end`.)_
+### 2026-06-20 — contract track: Phase-0 spikes 0.3 (O-FED) + 0.4 (O-LANCE-BAKEOFF rig) COMPLETE — fork-gate close-out
+
+- **Completed:** the last two Phase-0 spikes. **0.3 (O-FED federation)** — orchestrator-side investigation (`ci/probes/federation_spike.md`): verdict VIABLE as a uniqueness-gated merge enrichment (NOT the default; side-by-side-marked stays the default); synthetic precision 1.000/recall 0.967; 2 HIGH real-data risks; §11 router decision → Phase-6. **0.4 (O-LANCE-BAKEOFF rig)** — impl slice `ad8972f` + session `contract-007`: a reusable maintenance-contract measurement RIG, scope B (rig + real instrumentation + Fake target + PROPOSED envelope; the authoritative real reference-Mac run = a Phase-3 carry). Orchestrator round-seal `c97b5bd` (+ LESSON 18; orchestrator session `contract-008`). Phase 0 ✓ (0.5 notarization HITL-deferred, D-A2).
+- **Decisions made (owner-approved, present/driving):** **D-A17** spike-0.4 depth = scope B (reusable rig pre-fork; the authoritative real bake-off → Phase 3 — deferred, not dropped). **D-A18** spike-0.3 re-scoped to a schema-faithful synthetic corpus + a bounded already-present-v0.9.7 real cross-check after the safety classifier (correctly) blocked an ad-hoc CodeGraph install — §18-aligned (supply-chain pin-by-hash; CodeGraph is provisioned via `setup`, not ad-hoc-installed in a spike). **Owner GREEN-LIT the full fork-gate sequence** (auto-merge on a CLEAR `/phase-exit 1`; hard-stop on any finding).
+- **Scope shifts:** none new. Carry-forward triaged to the contract→spine/federation handoff set (D-A13/D-A14 deduped; +Phase-6 federation carry; +Phase-3 O-LANCE-BAKEOFF real-run carry; the done 1.5/1.6 bullets deleted).
+- **New blockers / open questions:** none. The §11 federation-router merge-policy decision is deferred to the Phase-6 track (the spike recommendation is recorded).
+- **Next session target:** `/phase-exit 1` → merge `track/contract`→`main` = the fork gate (owner-pre-authorized on a clean gate). Post-fork: contract-track `/team-end` (lead); spine + providers via the owner's separate `/team-start`.
+- **Reference:** orchestrator session `contract-008-2026-06-20-phase0-forkgate-orchestration.md`; impl session `contract-007-2026-06-20-phase0-lancedb-bakeoff-rig.md`; `ci/probes/federation_spike.md`.
+
+### 2026-06-20 — contract track: Phase 1.5 (boundary contracts) + 1.6 (before-fork hardening sweep) COMPLETE (end-of-1.6 cycle)
+
+- **Completed:** **Phase 1.5** — boundary contracts frozen as 4 atomic sub-slices (Redactor iface `343b6fb` §18 · policy.yaml fail-CLOSED `a9df580` §16 · MCP ingress `e65b9e3` + results `959d5d9` §14/§10; PolicyDenied marker; composes ProvenancePacket/EvidenceRef). **Phase 1.6** — before-fork hardening sweep (new task `### 1.6`): identity consolidation → `core/_types.py` + unicode-hardened `IdentityStr` `0520304` · frozen-collection list→tuple `ec71d48` · StrictBool ×7 `de63ead`. Suite 174→**232**. LESSONS §12–§17 banked. Briefs contract-014…020. Round-seal `b24df56` (track/contract).
+- **Decisions made (owner-approved, present/driving):** **D-A15** StrictBool uniform for frozen safety/security/lifecycle/output bools (exempt: deny-strengthening `Literal[True]`). **D-A16** IdentityStr Unicode char-policy (reject Cc/Cf/Zl/Zp on identities; allow unicode letters; Trojan-Source CONTENT sanitization → Phase-2 redactor, LESSON 14). Additive Appendix-A reconciliations (policy.yaml +`schema_version`; MCP result envelope + PolicyDenied + ASCII allow-list).
+- **Safety findings handled:** 1.6a medium before-fork finding (ASCII-only control-rejection on frozen identity fields still admitted Unicode bidi/zero-width/C1 → owner-approved Cc/Cf/Zl/Zp extension, D-A16). Every security-relevant slice (1.5a/1.5c1/1.6a/1.6c) security-reviewed CLEAN.
+- **Scope shifts:** before-fork sweep formalized as task `### 1.6` (a/b/c). Deferred-to-phase: chunk.vector→tuple (3.1, LanceDB binding); Trojan-Source content sanitization (2); §14-ingress hardening (`_GetFilePath` max_length + query control-char) + `get_file` runtime realpath-containment (8.2). Full list in contract-006.
+- **New blockers / open questions:** none. Fork obligations D-A13 (Task 2.S) + D-A14 (Task 4.2) carry to the spine via `/phase-exit 1`.
+- **Next session target:** Phase-0 spikes 0.3 (O-FED) + 0.4 (O-LANCE-BAKEOFF) → `/phase-exit 1` (fork gate) → merge `track/contract` → `main`. Fresh full-runway team (cycled end-of-1.6, context WARN).
+- **Reference:** orchestrator handoff `contract-006-2026-06-20-phase1.5-1.6-orchestrator-handoff.md`; impl session doc `contract-005-2026-06-20-*`.
+
+### 2026-06-18 — contract track: Phase 1.3 (trust contracts) + 1.4 (11-port freeze) COMPLETE (end-of-1.4 cycle)
+
+- **Completed:** **Phase 1.3** — the 3 §10 trust contracts frozen as atomic sub-slices (Anchor `5b50b5f` · EvidenceRef `518da07` · ProvenancePacket `77276e3`). **Phase 1.4** — all 11 ports frozen (HostPort `8aa6935` · 4 providers `e9d1e51` · CodeGraphPort `b1dafcc` · Event/Secret/Observability `05c3551`). Suite **174/174** green. LESSONS §6–§11 banked. 7 briefs (contract-007…013).
+- **Decisions made (lead-adjudicated, owner-away):** **D-A11** EvidenceType/IdKind membership DEFERRED to Phase-4 (external NexusOps authority; constrained-str now, narrow additively). **D-A12** ProvenancePacket reconciled +`evidence: tuple[EvidenceRef]` (additive, ER-map-mandated). **D-A13** §14 INV-allowlist FULL runtime proof = Task 2.S (Phase-2, gated; 1.4a seeds the static tripwire). **D-A14** CodeGraph shell-out argv-hardening = Phase-4.2 ★SAFETY (primary query-arg injection control; gated Acceptance(4)). HostPort fail-closed authorize + perform capability-recheck (defense-in-depth). CodeGraph spike-0.2 corrections baked (schema ≥5, search→query, CODEGRAPH_DIR allow-list). model_version on EmbeddingProvider only (principled asymmetry). SecretRef carries no secret (#3). cassette record/replay re-sequenced to providers/eval.
+- **Safety findings handled:** 1.4c HIGH (CodeGraph dir-validator deny-list → positive allow-list + 18-value bypass corpus; LESSON 10). All HIGH/critical relayed to lead per recalibration. HostPort chokepoint proof accepted (D-A13). No unresolved security residuals (the 2 gated Phase-2/4 tasks backstop the deferred runtime proofs).
+- **Cross-doc:** 9 `core/CLAUDE.md` rows + LESSONS §6–§11; ARCHITECTURE.md Appendix-A:216–220 reconciled + 3 additive port rows (Event/Secret/Obs) + §5 line-90 `deleted` clarification.
+- **Scope shifts:** 1.3/1.4 ran as 7 atomic sub-slices (each ★ freeze with its own snapshot). cassette → providers/eval. Real StandaloneHost → Phase-2; real CodeGraph CLI adapter → Phase-4.2.
+- **Next session target:** Phase 1.5 (MCP contract · policy.yaml · Redactor iface) → before-fork hardening sweep → Phase-0 0.3/0.4 → `/phase-exit 1` (fork gate) → merge. Fresh full-runway team (cycled at end-of-1.4).
+- **Reference:** orchestrator handoff `docs/sessions/contract-004-2026-06-18-phase1-trust-and-ports-handoff.md`; impl session doc `contract-003-*`; decision log D-A1–A14. Round commits — impl on `track/contract` (`5b50b5f`…`05c3551`), integration on `main` (this).
+
+### 2026-06-17 — contract track: Phase-0 spikes + Phase 1.1/1.2 contract freeze (end-of-1.2 cycle)
+
+- **Completed:** Phase-0 spikes 0.1 (redaction envelope) + 0.2 (CodeGraph coldiff); Phase 1.1 (Clock/Seed/IdGen determinism seams + `core/` package bootstrap); **Phase 1.2 COMPLETE** — the §5 contract group frozen (Chunk · StoreVersionStamp · ProjectManifest+ManifestArtifact · Registry+RegistryEntry · pure migration engine). Suite 82 green. LESSONS §1–§5 banked.
+- **Decisions:** stamp omits the SHA (version tag = sole canonical SHA home; DATA_MODEL draft superseded; D-A8-equiv); Appendix-A field-set reconciles (Chunk 16→19, manifest 9→12, registry 5→6; D-A7); serialized-file models pin two snapshots + `validate_by_name/by_alias` (LESSON §4); migration engine PURE (host owns I/O+backup, §4/§7); `RegistryEntry.policy` min_length=1 (fail-open closed). Owner-deferred (lead-adjudicated): FLAG-4 cloud-egress strictness + the 95/5 redaction threshold → Phase 2.3 (D-A5/D-A6); 0.5 notarization → HITL (D-A2); D-A3 preflight.md edit → recommended-FIRST owner action, HITL-deferred.
+- **Findings handled:** register-shadow HIGH bug (code-only, LESSON §3); spec-lint numeric-ID gate fixed (`392ed4f`); gate-output-suppression shipped 3 E501s (lint-only, fixed `1ffdcc4`, LESSON §5, root enabler = D-A3 / D-A9).
+- **Scope shifts:** Task 1.2 ran as 5 atomic per-model sub-slices (1.2a–1.2d) rather than one bundle (each a ★ freeze-before-fork with its own snapshot). Before-fork hardening sweep (whitespace-strip) carried forward.
+- **Next session target:** Phase 1.3 (trust contracts: Anchor/ProvenancePacket/EvidenceRef) → 1.4 (ports) → 1.5 (boundary contracts). Run Phase-0 0.3/0.4(/0.5) + the before-fork sweeps before `/phase-exit 1` (the fork gate).
+- **Reference:** orchestrator handoff doc `docs/sessions/contract-001-2026-06-17-phase1-contracts.md`. Round commits — impl on `track/contract` (`61853b3`…`bb000b1`), integration on `main` (`aa1f32d`/`4b6e742`/`c02e32b` + this).
+
+_(Populated at every `/orchestrate-end`.)_
