@@ -4,7 +4,7 @@
 **Track:** contract
 **Worktree:** `../project-brain-contract` (branch `track/contract`); shared root docs in the root checkout on `main`
 **Predecessor handoff:** first lead handoff
-**Successor handoff:** _(filled when the next /team-end runs)_
+**Successor handoff:** `docs/team-handoffs/contract-002-2026-06-21-fork-gate-complete.md` (fork gate complete — contract track DONE)
 **Round-seal commits at handoff:** `track/contract` `158bdeb` · `main` `0e4c240` (both pushed to origin)
 
 ## Why this handoff exists
