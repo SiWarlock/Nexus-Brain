@@ -224,7 +224,7 @@ Executed row-by-row by `/phase-exit <phase>`:
 - [x] Files: `core/_types.py` (NEW) + retrofits across `core/model/*` + `core/ports/*`. Cross-doc invariant: constraint-tightening on frozen contracts (additive — no field-name/shape change; all schema-snapshots stayed green = the regression guard). Suite 174→232. Depends on: 1.2/1.3/1.4/1.5.
 
 ### Acceptance criteria (1)
-- [ ] All Appendix-A freeze-before-fork models exist + have schema-snapshot tests; all 11 ports have interfaces + Fake doubles; `/preflight` clean. **This is the fork gate.**
+- [x] All Appendix-A freeze-before-fork models exist + have schema-snapshot tests; all 11 ports have interfaces + Fake doubles; `/preflight` clean. **This is the fork gate.** _(/phase-exit 1 CLEAR 2026-06-20 — arch-drift + reachability + security all CLEAR; spec-coverage `tests 1` PASS; suite 232 green. Reports: `docs/audits/phase1-{arch-drift,reachability,security}.md`.)_
 
 ---
 
@@ -571,6 +571,18 @@ _(Empty at project start; populated as scope cuts surface. Seeded nice-to-haves 
 ---
 
 ## Log
+
+### 2026-06-20 — /phase-exit 1 CLEAR — THE FORK GATE (Phase 0 + Phase 1 complete)
+
+- **Gate verdict: CLEAR.** All `/phase-exit 1` rows pass on the converged tree (`track/contract` @ `2f07738`):
+  - arch-drift **CLEAR** — 9 Spec anchors (§7/§5/§4/§10/§14/§16/§18/§2.5) + all 18 Appendix-A rows verified, 0 drift (`docs/audits/phase1-arch-drift.md`).
+  - reachability **CLEAR** — 81 `core/` exports, 0 genuine orphans; frozen contracts consumed by Fakes+tests, production wiring is Phase 2+ (`docs/audits/phase1-reachability.md`).
+  - security **CLEAR** — all 6 Key safety rules PASS, 0 findings; deferred D-A13/D-A14 runtime proofs confirmed tracked-not-gaps (`docs/audits/phase1-security.md`).
+  - `/preflight` clean (ruff · format 47 · mypy 47 · pytest 232); spec-coverage `scripts/spec-lint.sh tests 1` PASS (all 9 anchors; §4/§2.5 tags added `2f07738`); session docs contract-001…008.
+  - dep audit: NO new runtime deps Phase 0–1 (pydantic>=2 only) → no new findings vs baseline by construction. **FLAG (production-grade):** `pip-audit` tool absent in env → install before Phase 2/3 (lancedb/llama/fastmcp). perf: n/a (no Phase-1 benchmark).
+- **Fork obligations landed in the contract→spine handoff** (Carry-forward): D-A13/Task 2.S (§14 INV-allowlist FULL runtime proof + real `StandaloneHost`, Phase 2, Acceptance(2)-gated) · D-A14/Task 4.2 (CodeGraph argv-hardening, Phase 4, Acceptance(4)-gated) · Phase-6 federation carry (O-FED) · Phase-3 O-LANCE-BAKEOFF real-run carry.
+- **Publish (owner-run, path b):** the merge `track/contract`→`main` is committed LOCALLY; the owner runs `git push origin main` (the agent main-push is classifier-gated — peer-relay ≠ user intent). The fork completes when that push lands; spine + providers then spin up via the owner's separate `/team-start`.
+- **Reference:** orchestrator session `contract-008-2026-06-20-phase0-forkgate-orchestration.md`; the 3 `docs/audits/phase1-*.md` reports.
 
 ### 2026-06-20 — contract track: Phase-0 spikes 0.3 (O-FED) + 0.4 (O-LANCE-BAKEOFF rig) COMPLETE — fork-gate close-out
 
