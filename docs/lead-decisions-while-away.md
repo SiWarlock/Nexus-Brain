@@ -248,3 +248,31 @@ Suite 137/137, gates clean. **Lead accepted — cardinal Rule #4 chokepoint cont
 **Decision (owner-approved).** Extend `IdentityStr` to reject Unicode control/format/bidi/zero-width/separator categories (`Cc`/`Cf`/`Zl`/`Zp`) while ALLOWING legitimate unicode letters/digits (so unicode source paths like `日本語.py` validate). `TextStr` (content — `chunk.text` is source code) stays permissive; the bidi/format CONTENT sanitization (Trojan-Source) is deferred to the **Phase-2 ingest/redactor** (flag/strip at the consuming phase, not a frozen-contract hard-reject that would refuse legitimate multilingual content — LESSON 14). Landed 1.6a `0520304`; LESSON 16. Routed as an orchestrator decision (clear-cut hardening, medium) + owner-confirmed per the load-bearing-cross-track-contract + security-finding class (same posture as D-A15/StrictBool).
 
 **Reversibility.** Full — widening an allow-list later is additive (freeze tight, widen additively — LESSON 14).
+
+---
+
+## D-A17 — Phase-0 spike 0.4 (O-LANCE-BAKEOFF) depth: pre-fork = the reusable RIG (scope B), authoritative real bake-off defers to Phase 3 (owner-approved)
+**When:** 2026-06-20 · owner-approved (present/driving) via lead · **Category:** scope/sequencing + dependency-scoping (pre-build-spike depth) — owner's call · **Raised by:** `contract-core-orchestrator` (fresh post-1.6 team)
+
+**Context.** Spike 0.4 must measure `optimize()` latency · index-build RAM · steady-state disk for the §6 maintenance contract ("maintenance contract invisible" on the reference Mac). Two depths surfaced:
+- **A** — run the AUTHORITATIVE real reference-Mac bake-off pre-fork: add `lancedb` + a real embedding model + a real multi-repo corpus and measure now.
+- **B** — ship the reusable RIG pre-fork (real measurement instrumentation + a Fake `MaintenanceTarget` + a documented methodology + best-effort local numbers), and defer the authoritative real run to Phase 3 (where `lancedb` becomes a real dependency anyway). `lancedb` is currently NOT a project dependency (core deps ≈ `pydantic>=2`).
+
+**Decision (owner-approved): B.** Pre-fork 0.4 = the reusable rig (corpus gen + measurement-record schema + optimize-latency/RAM/disk harness + report) TDD'd against a synthetic/Fake store + documented methodology + best-effort local numbers. The authoritative real reference-Mac bake-off (real `lancedb` + embedding model + multi-repo corpus) **defers to Phase 3**. The O-LANCE-BAKEOFF acceptance unknown is **explicitly DEFERRED, NOT DROPPED** — noted in the 0.4 rig doc + carried into the Phase-3 maintenance-contract task. Brief: `contract-021`; Task #10 dispatched on `track/contract` (scope B; mirrors spike 0.1's `ci/eval/redaction_fuzz/` rig).
+
+**Rationale.** The rig is the reusable Phase-0 deliverable Acceptance(0) asks for + the §6 maintenance-contract measurement tool; the real bake-off naturally belongs with Phase-3 LanceDB. Pulling a heavy dep + embeddings into a Phase-0 spike just to measure now front-loads cost the fork doesn't need, and honors the supply-chain/no-ad-hoc-heavy-install posture. Orchestrator's lean was B; owner confirmed (production-grade-correctness call — owner could have chosen A to get real numbers before committing to the §6 maintenance contract).
+
+**Reversibility.** Full — the rig is backend-agnostic (a `MaintenanceTarget` Protocol); the Phase-3 real run swaps the Fake for a real `lancedb`-backed target + sets the authoritative budget numbers, no rig change.
+
+---
+
+## D-A18 — Spike 0.3 (O-FED) re-scoped to a schema-faithful synthetic corpus (safety-classifier-driven, §18-aligned; orchestrator-adjudicated, lead-noted)
+**When:** 2026-06-20 · **Category:** methodology re-scope touching a Key safety rule (§18 supply-chain) — orchestrator-handled, lead-noted for owner awareness · **Raised by:** `contract-core-orchestrator`
+
+**Context.** The 0.3 federation cross-repo resolution spike's real-data path needed an ad-hoc `npm install @colbymchenry/codegraph@1.0.1` (downloads + executes a per-platform binary from GitHub Releases). The auto-mode SAFETY classifier denied the sub-agent's install — correctly: that is exactly what §18 "supply-chain pin-by-hash, fail-closed" guards against (CodeGraph is provisioned via `setup` with hash verification, NOT ad-hoc-installed in a spike).
+
+**Decision (orchestrator).** Re-scope 0.3 to a **schema-faithful SYNTHETIC corpus** — the exact CodeGraph 1.0.1 `unresolved_refs`/`nodes` schema is already verified in spike 0.2, so the resolver prototype + precision/recall measurement + ambiguity/no-match fallback are characterized on a hand-labeled adversarial corpus. Mirrors spike 0.1 (synthetic property + curated adversarial corpus) and honors §18. The probe doc (`ci/probes/federation_spike.md`) is explicit about the synthetic basis + recommends a real-CodeGraph validation pass once it is provisioned via `setup`. Run as an orchestrator spike-agent investigation (like 0.2), in parallel with 0.4.
+
+**Owner option (offered, no action taken).** If the owner wants real-tool fidelity pre-fork, they may authorize a pinned CodeGraph install for a one-off real-data cross-check. Orchestrator + lead lean: NOT needed — the synthetic-faithful spike answers the §11 viability/precision/fallback question; real-data validation belongs at provisioning.
+
+**Reversibility.** Full — a real-CodeGraph cross-check can be run later (at provisioning / Phase 6) and appended to the probe doc without changing the verdict's structure.
