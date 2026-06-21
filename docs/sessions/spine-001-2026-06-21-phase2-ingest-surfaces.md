@@ -3,7 +3,7 @@
 - **Date:** 2026-06-21
 - **Phase:** 2 (Ingestion + Redactor — spine track)
 - **Predecessor:** fork from `track/contract` (terminal handoff `docs/team-handoffs/contract-002-2026-06-21-fork-gate-complete.md`; Phase 0+1 frozen on `main`)
-- **Successor:** _(next spine implementer session — picks up the 2.4 + 2.S bundle)_
+- **Successor:** [spine-002-2026-06-21-add-pipeline-hostport-proof.md](spine-002-2026-06-21-add-pipeline-hostport-proof.md)
 - **Branch:** `track/spine` · **Commits:** `dc5a9aa` (2.1) · `c10ea79` (2.2a) · `723db12` (2.3 ★SAFETY) · `434c46a` (2.2b)
 
 ## Why this session existed
