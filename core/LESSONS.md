@@ -264,3 +264,68 @@ A Phase-0 measurement rig exists to **de-risk a later phase's load-bearing unkno
 The 0.4 review fold added a sharp sub-lesson: **design the instrumentation against the real backend's actual cost model, even when validating against a Fake.** The RAM meter must span ingest **+ `optimize()`**, because a real `lancedb` index build's RAM lives in `optimize()`, not ingest — a meter wrapping only ingest would read ~0 on the real Phase-3 target and silently under-report the load-bearing metric. The Fake validates wiring; the real cost model dictates *what window* to measure.
 
 **Rule:** A reusable measurement RIG (a Phase-0 spike de-risking a later phase) ships REAL instrumentation + a deterministic Fake target + named `PROPOSED_*` envelope constants; the authoritative numbers land where the real backend lands (never bake a real-hardware/quality number into the rig); it lives in `ci/` and runs out-of-band (never imported by core); and the instrumentation is designed against the real backend's cost model (measure the right window, not the convenient one).
+
+---
+
+## <a id="19"></a>19. An ingest-stage's re-declared closed set is pinned EQUAL to the frozen contract's via a `get_args` drift test
+
+**Date:** 2026-06-21.
+**Source slice:** 2.1 (`discovery_and_classification`).
+
+The classifier (`core/ingest/classify.py`) emits a `FileClassification` whose `doc_or_code` and `ownership` fields are `Literal` closed sets that MUST equal the frozen `Chunk` contract's same-named fields (§5/§8): the `add` pipeline (2.4) folds the classification straight into `Chunk`s, so any divergence — a value the classifier can emit that `Chunk` rejects, or vice-versa — is a latent runtime `ValidationError` deferred to the first real ingest, not a caught one. The stage re-declares the alphabet locally rather than importing the model for two string tuples (ingest → model is a permitted import, but the local restatement keeps the stage readable); the trap is that two independently-declared closed sets **drift silently** — nothing fails until a real file hits the unmatched value.
+
+The fix is a **drift test** asserting the two are byte-identical via `typing.get_args` on the model annotations — `get_args(FileClassification.model_fields["doc_or_code"].annotation) == get_args(Chunk.model_fields["doc_or_code"].annotation)` (and the same for `ownership`). It fails the instant either side changes without the other, converting a deferred runtime failure into a unit failure. This is the closed-set analogue of LESSON 6 (StrEnum membership snapshot) for the case where a **non-contract stage mirrors a contract field** rather than owning its own canonical alphabet. The open-ended axes (`producer`/`doc_type`, typed `IdentityStr`) are deliberately NOT membership-pinned — the contract declares them open ("classifier may grow") — so a non-empty assertion is the only guard they get.
+
+**Rule:** When an ingest/pipeline stage re-declares a `Literal` closed set that must equal a frozen contract field's, pin the equality with a `get_args` drift test on both model annotations — never trust two hand-kept copies to stay in sync (a drift is a *deferred* runtime `ValidationError`). Open-ended (`IdentityStr`) axes get a non-empty guard, not a membership pin.
+
+---
+
+## <a id="20"></a>20. A mid-pipeline stage with an all-required frozen output contract emits an internal `*Draft`; the frozen model is assembled where the full context exists
+
+**Date:** 2026-06-21.
+**Source slice:** 2.2a (`anchor_aware_chunking_docs`); companion to LESSON 19.
+
+The §8 chunk stage must produce `Chunk` + `Anchor` data, but **both frozen contracts are all-required** — `Chunk` needs `vector` (embed, Phase-3), `chunk_id`/`created_at` (IdGen/Clock seams), `*_sha`/`generation` (ingest, 2.4); `Anchor` needs `anchor_id`/`project_id`/`last_resolved_sha`. None of that context exists at chunk-time. The wrong move is to relax the frozen contract (make fields optional, add a placeholder `vector=[]`) so it can be partially built early — that punches a hole in a freeze-before-fork cross-track contract (a Finding) and defers the "is this really populated?" question to runtime. The right move: the stage emits an **internal `*Draft`** (`ChunkDraft`) carrying exactly the **chunk-derivable subset** + the stage-owned data (here: the anchor span strings, whose *syntax* this producer owns); the **frozen model is assembled at the stage that has the full context** (2.4, with ingest-context + the IdGen/Clock/embed seams). The draft is a plain internal type (like `DiscoveredFile`/`FileClassification`) — frozen + `extra="forbid"` for parse-don't-trust, but **not** an Appendix-A contract (no freeze/snapshot obligation), so it stays free to evolve across the spine's stages.
+
+Two pins keep the draft honest against the contract it feeds: a **`get_args` closed-set drift test** (LESSON 19) and a **field-name subset test** (`draft's chunk-mirroring fields ⊆ Chunk's fields`, against a canonical `ANCHOR_SPAN_FIELDS` constant so the test doesn't re-declare the boundary) — so a draft field that couldn't fold into `Chunk` fails a unit test, not the first real ingest. A subtle corollary surfaced in review: the draft's fields inherit the **contract's own value constraints** even pre-assembly — `ChunkDraft.text` is `TextStr` (cap `TEXT_MAX_LEN`) and `target_symbol` is `IdentityStr` (cap `IDENTITY_MAX_LEN`), so the stage must already respect those caps (sub-split oversized text; truncate an over-long symbol) or it crashes on its own "any input" guarantee. The draft isn't a constraint-free scratch type — it's the contract's antechamber.
+
+**Rule:** A mid-pipeline stage whose frozen output contract is all-required emits an internal `*Draft` of the derivable subset (frozen + `extra="forbid"`, but NOT an Appendix-A contract); assemble the frozen model at the stage that owns the full context (ids/SHA/vector via the seams) — never relax or partially-construct a frozen cross-track contract. Pin the draft to its target with a `get_args` closed-set test + a field-name subset test, and honor the target's per-field value constraints (caps) in the draft already.
+
+---
+
+## <a id="21"></a>21. Redactor detection: run the allowlist BEFORE the entropy test, and capture the whole sensitive value
+
+**Date:** 2026-06-21.
+**Source slice:** 2.3 (`redactor_catchable_set_engine`); ★ Key safety rule #2.
+
+Three detection-ordering/completeness rules the §18 redactor lives or dies by — all surfaced building (or security-reviewing) the catchable-set engine:
+
+1. **Allowlist before entropy (the cardinal ordering).** A git-SHA / ULID / UUID is high-entropy *by shape*, so an entropy filter that runs first will redact it — and redacting a git-SHA is the cardinal §18 residual failure (it breaks the LanceDB version tag, `last_resolved_sha` provenance, and manifest integrity — §18/D-14). The allowlist (40/64-hex SHA · ULID · UUID) MUST run first; only a value that survives it reaches the entropy test. (Anticipated in the brief; the convention the whole engine is ordered around.)
+
+2. **Capture the WHOLE sensitive value, not the high-entropy run (the security-HIGH this slice).** A detector that redacts only the contiguous high-entropy substring leaks the tail of a value that contains an embedded delimiter — `API_KEY=ab,cd<more-secret>` splits at the `,` and the tail survives (and the all-alphanumeric fuzz corpus structurally can't see it, so the *gate* read green while a real leak existed — only the adversarial security review caught it). Redact a sensitive value to its quote/delimiter boundary (quoted → to the closing quote; non-sensitive → conservatively to the delimiter as the URL-query FP guard).
+
+3. **Entropy detection is CONTEXTUAL — assignment values only, never a bare-token scan.** A blanket high-entropy scan over bare tokens redacts every hex/base64/long-id literal = unacceptable false positives; restricting entropy redaction to values *inside an assignment* (`KEY=v` · `export` · YAML `k: v` · JSON `"k":"v"`) is what holds the bare-token FP corpus at 0%.
+
+**Rule:** In a redaction/secret-detection engine, run the passthrough ALLOWLIST (git-SHA/ULID/UUID) before any entropy test (entropy-first redacts a SHA = the cardinal §18 residual failure); capture a flagged sensitive value WHOLE to its quote/delimiter (a partial high-entropy run leaks the tail past an embedded delimiter); and scan entropy contextually (assignment values only, never bare tokens) to hold false positives down. A synthetic gate that reads green does NOT prove completeness — adversarial review of the detection logic is the backstop.
+
+---
+
+## <a id="22"></a>22. Redaction idempotence keys on an EXACT marker match, never a prefix — a prefix check is input-spoofable
+
+**Date:** 2026-06-21.
+**Source slice:** 2.3 (`redactor_catchable_set_engine`); ★ Key safety rule #2 (security-reviewer MED).
+
+A redactor must be idempotent (`redact(redact(p,s),s) == redact(p,s)`) — it skips re-processing content it already redacted, identified by its own marker. The trap: implementing that skip as `value.startswith("[REDACTED")` is **input-spoofable** — ingested content (source code, a doc, an MCP payload) can itself contain the literal `[REDACTED…` prefix shape and thereby **suppress redaction of an adjacent real secret** (wrap the secret's container in the marker shape and the prefix check waves it through). Idempotence must instead key on an **EXACT match against the closed, finite marker set** (`{[REDACTED_TOKEN], [REDACTED_SECRET], [REDACTED_PEM_KEY], [REDACTED_JWT], [REDACTED_CREDENTIAL]}`) — only the redactor's OWN exact markers are skipped; a spoofed near-marker is processed normally. The marker set is closed + secret-free (matches no detector), so exact-match idempotence holds without re-triggering. Generalizes to any sanitizer/marker scheme: the skip-already-done predicate over UNTRUSTED input must be exact-and-closed, never a prefix/substring (a fuzzy self-recognition check on attacker-influenced data is a suppression vector).
+
+**Rule:** A redactor/sanitizer's "already-processed" skip predicate keys on an EXACT match against a closed marker set, never `startswith`/`contains` — a prefix/substring check on untrusted content is spoofable to suppress redaction of an adjacent real secret.
+
+---
+
+## <a id="23"></a>23. Vendor the one needed module (license-retained, edits-flagged) when an architecture-pinned dep is deprecated/un-importable but its logic is sound
+
+**Date:** 2026-06-21.
+**Source slice:** 2.2b (`anchor_aware_chunking_code`).
+
+When an architecture-pinned dependency is deprecated or un-importable (a broken package `__init__`, a removed transitive module — here `llama-index-packs-code-hierarchy`'s `__init__` eagerly imported a `llama_index.core.llama_pack` module removed from current core, breaking every import path to the `CodeHierarchyNodeParser` we needed) but the **specific logic is sound + permissively licensed**, the right remediation is to **VENDOR that one module** — NOT to fight the broken package (pin-hunting old version pairs, `importlib`/`sys.modules` shims around the `__init__`) and NOT to silently swap to a different tool (an architecture deviation = escalate to the owner). Vendoring done right: copy the single module **verbatim** into the codebase behind an internal seam; **retain the original copyright + license notice + a provenance comment** (source package + version); pin **only the libraries that module actually imports** (not the broken parent package — and watch for a SECOND-order incompatibility: the chosen grammar lib `tree-sitter-language-pack` bundled its own incompatible tree-sitter binding, forcing standard `tree_sitter` + individual grammar packages, LESSON-21-adjacent "verify the transitive runtime, not just the install"); mark every necessary edit in-file (`# VENDOR-EDIT`) + flag at Step 9 (here 3: the grammar-loader rewrite, the grammar registry, a Pydantic v1→v2 `.dict()`→`.model_dump()` compat fix **required** because `.dict()` RAISES under `-W error` on Pydantic v2); **exclude the vendored file from strict lint/type** (it's vendored-not-authored). This preserved the exact owner-chosen capability (the deep-hierarchy parser) while escaping the deprecated pack. Two governance musts: it's a **load-bearing dep decision → owner sign-off** (the owner chose vendor-over-alternatives deliberately); and carry a **re-sync-vs-upstream TODO** + the owner's standing instruction that a maintained library genuinely beating the vendored module on a material capability is surfaced BEFORE finalizing, never silently swapped.
+
+**Rule:** When an architecture-pinned dep is deprecated/un-importable but the needed logic is sound + permissively licensed, VENDOR that one module behind an internal seam (license + provenance retained, every edit `# VENDOR-EDIT`-flagged, pin only the libs it imports + verify their transitive runtime, exclude from strict lint) — don't fight the broken package or silently swap tools (an arch deviation = escalate). Requires owner sign-off + a re-sync-TODO.
