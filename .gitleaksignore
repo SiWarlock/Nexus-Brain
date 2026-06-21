@@ -10,3 +10,6 @@
 #
 # Example (delete once real entries exist):
 # 0123456789abcdef0123456789abcdef01234567:tests/fixtures/stripe-cassette.json:generic-api-key:12  # recorded test cassette, fake key
+
+# 2.3 redactor test: synthetic high-entropy fixture in test_marker_contains_no_secret — fake, not a real credential
+core/tests/ingest/test_redactor.py:generic-api-key:225

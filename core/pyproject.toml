@@ -38,6 +38,13 @@ python_version = "3.12"
 strict = true
 files = ["ports", "model", "testing", "tests", "ingest"]
 
+# The redaction-fuzz CI gate lives in ci/ (repo root, outside core's import root). The §18 gate test
+# reaches it out-of-band (core ⊥ ci/: the engine never imports ci; only the test does). ci/ is not a
+# typed package here, so treat its imports as untyped rather than erroring under --strict.
+[[tool.mypy.overrides]]
+module = "ci.*"
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
