@@ -1,7 +1,7 @@
 # contract-006 — 2026-06-20 — Phase 1.5 (boundary contracts) + 1.6 (before-fork hardening sweep) — orchestrator handoff
 
 > **End-of-1.6 cycle (context-triggered).** Orchestrator-side round doc + contract→fresh-team handoff (track: contract). The fresh orchestrator: read this + the decision log (`docs/lead-decisions-while-away.md`, D-A1–A16) + the impl session doc (`contract-005-*`) + `IMPLEMENTATION_PLAN.md` "Currently in progress" (root/main canonical), then `/orchestrate-start` and continue at **Phase-0 spikes 0.3/0.4 → `/phase-exit 1`**.
-> **Predecessor:** `contract-004` (end-of-1.4). **Successor:** _(next /orchestrate-end)._
+> **Predecessor:** `contract-004` (end-of-1.4). **Successor:** `contract-008` (Phase-0 close-out + fork-gate orchestration).
 
 ## What landed this round (Phase 1.5 + 1.6 — 7 slices)
 
