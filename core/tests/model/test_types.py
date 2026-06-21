@@ -14,6 +14,9 @@ from pydantic import TypeAdapter, ValidationError
 
 from _types import IDENTITY_MAX_LEN, TEXT_MAX_LEN, IdentityStr, TextStr
 
+# spec(§2.5): this very import is the cross-sibling seam — core/_types.py is imported by BOTH
+# model/ and ports/, which keeps the §2.5 subsystem DAG acyclic (no forbidden ports→model edge).
+
 pytestmark = pytest.mark.unit
 
 _ID: TypeAdapter[str] = TypeAdapter(IdentityStr)

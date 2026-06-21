@@ -266,6 +266,7 @@ def _scan_file_for_mutations(path: Path, label: str) -> list[str]:
 
 
 def test_inv_allowlist_no_mutation_outside_hostport() -> None:
+    # spec(§4): Key safety rule #4 — the single mutation chokepoint (`HostPort`, §4 #3).
     # spec(§14 / §4 #3): the chokepoint tripwire — NO core/ module performs an FS/git mutation
     # outside the allowlisted host-adapter path (core/ports/host.py). Passes now (nothing mutates);
     # fails the first Phase-2 bypass — Key-safety-rule-#4 enforcement on the record from Phase 1.
